@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Al-Mosafer Smart Tool v61.0</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap');
+:root{
+  --primary:#003580;--primary-light:#1a4a9c;--secondary:#00b1ff;
+  --bg:#f0f4f9;--card:#ffffff;--text-dark:#1a202c;--text-mid:#4a5568;
+  --success:#16a34a;--danger:#dc2626;--warn:#d97706;
+  --internal-bg:#0f172a;--internal-fg:#4ade80;
+  --border:#dde3ed;--muted:#94a3b8;--accent:#e8f0fe;
+}
+*{box-sizing:border-box;}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text-dark);margin:0;padding:20px;min-height:100vh;}
+
+/* TOP BAR */
+.top-bar{
+  background:linear-gradient(135deg,#003580 0%,#1a4a9c 100%);
+  color:white;padding:14px 24px;border-radius:16px;
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:20px;box-shadow:0 8px 24px rgba(0,53,128,.25);
+}
+.top-bar h1{margin:0;font-size:1.15rem;font-weight:900;letter-spacing:-.3px;display:flex;align-items:center;gap:10px;}
+.top-bar h1 .badge{background:rgba(255,255,255,.15);font-size:.7rem;padding:2px 10px;border-radius:20px;font-weight:600;letter-spacing:.5px;}
+.lang-btn{padding:6px 16px;border-radius:20px;border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:white;cursor:pointer;font-size:.8rem;font-family:'Cairo',sans-serif;font-weight:600;transition:.2s;}
+.lang-btn:hover{background:rgba(255,255,255,.2);}
+.lang-btn.active{background:white;color:var(--primary);border-color:white;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.reset-btn{padding:6px 16px;border-radius:20px;border:1.5px solid rgba(239,68,68,.5);background:rgba(239,68,68,.1);color:#fca5a5;cursor:pointer;font-size:.8rem;font-family:'Cairo',sans-serif;font-weight:600;transition:.2s;}
+.reset-btn:hover{background:rgba(239,68,68,.25);}
+
+/* LAYOUT */
+.container{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:420px 1fr;gap:20px;align-items:start;}
+@media(max-width:1050px){.container{grid-template-columns:1fr;}}
+
+/* CARDS */
+.card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);margin-bottom:20px;border:1px solid var(--border);transition:box-shadow .2s;}
+.card:hover{box-shadow:0 4px 20px rgba(0,0,0,.08);}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--accent);}
+.card-header .icon{width:32px;height:32px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.card-header h3{margin:0;color:var(--primary);font-size:.95rem;font-weight:800;}
+
+/* FORM ELEMENTS */
+label{display:block;font-weight:700;margin:12px 0 5px;font-size:.73rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+input,select,textarea{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 13px;font-size:.88rem;font-family:'Cairo',sans-serif;transition:.2s;background:#f8fafc;color:var(--text-dark);}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--secondary);box-shadow:0 0 0 3px rgba(0,177,255,.1);background:white;}
+textarea{height:155px;font-family:'IBM Plex Mono',monospace;font-size:.8rem;background:#f8fafc;border-color:var(--secondary);border-width:2px;line-height:1.6;resize:vertical;}
+select{cursor:pointer;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+/* FORMAT HELPER */
+.fmt-helper{background:linear-gradient(135deg,#eff6ff,#f0f9ff);border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:14px;font-size:.8rem;}
+.fmt-helper summary{cursor:pointer;font-weight:700;color:var(--primary);list-style:none;display:flex;align-items:center;gap:6px;}
+.fmt-helper summary::before{content:'📋';}
+.fmt-tabs{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0 8px;}
+.fmt-tab{padding:4px 11px;border-radius:15px;border:1px solid #bfdbfe;background:white;cursor:pointer;font-size:.73rem;font-weight:700;color:var(--primary);transition:.15s;}
+.fmt-tab.active,.fmt-tab:hover{background:var(--primary);color:white;border-color:var(--primary);}
+.fmt-example{background:white;border:1px dashed #bfdbfe;border-radius:8px;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;line-height:1.7;white-space:pre-wrap;display:none;color:#334155;}
+.fmt-example.active{display:block;}
+.use-example-btn{background:var(--primary);color:white;border:none;border-radius:7px;padding:5px 13px;cursor:pointer;font-size:.74rem;font-weight:700;margin-top:7px;font-family:'Cairo',sans-serif;transition:.2s;}
+.use-example-btn:hover{background:var(--primary-light);}
+
+/* FLIGHT CHIPS */
+.parsed-flights{margin-top:10px;}
+.flight-chip{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:.82rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.fc-airline{background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:3px 9px;font-weight:800;font-size:.73rem;}
+.fc-route{font-weight:800;font-size:.9rem;color:var(--primary);}
+.fc-time{color:var(--muted);font-size:.78rem;}
+.fc-date{background:#fef9c3;color:#854d0e;border-radius:6px;padding:3px 9px;font-size:.73rem;font-weight:600;}
+.fc-terminal{color:#7c3aed;font-size:.73rem;background:#ede9fe;border-radius:6px;padding:3px 8px;font-weight:600;}
+.fc-edit{margin-right:auto;background:transparent;border:1.5px solid var(--border);border-radius:6px;padding:3px 9px;font-size:.72rem;cursor:pointer;color:var(--muted);font-family:'Cairo',sans-serif;transition:.2s;}
+.fc-edit:hover{border-color:var(--secondary);color:var(--secondary);}
+
+/* EDIT OVERLAY */
+.edit-overlay{background:white;border:2px solid var(--secondary);border-radius:12px;padding:14px;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,177,255,.1);}
+.edit-overlay .eg{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.edit-overlay label{margin:5px 0 3px;font-size:.7rem;}
+.edit-overlay input{padding:7px 9px;font-size:.82rem;}
+.save-btn{background:var(--success);color:white;border:none;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:.78rem;font-family:'Cairo',sans-serif;font-weight:700;margin-top:8px;transition:.2s;}
+.save-btn:hover{opacity:.88;}
+
+/* OUTPUT BOXES */
+.msg-box{background:#f8fafc;border:1px solid var(--border);padding:16px 18px;border-radius:12px;margin-bottom:12px;white-space:pre-wrap;line-height:1.9;font-size:.9rem;position:relative;border-right:4px solid var(--secondary);}
+.msg-box::before{content:attr(data-lang);position:absolute;top:-11px;right:14px;background:var(--secondary);color:white;padding:2px 12px;border-radius:20px;font-size:.67rem;font-weight:800;letter-spacing:.3px;}
+[dir="ltr"] .msg-box::before{right:auto;left:14px;}
+.internal-box{background:var(--internal-bg);color:var(--internal-fg);border:none;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.82rem;line-height:1.9;border-right:none;border-left:4px solid #4ade80;}
+.internal-box::before{background:#16a34a;}
+
+/* BUTTONS */
+.btn{width:100%;padding:12px;border:none;border-radius:10px;cursor:pointer;font-weight:700;margin-top:8px;font-family:'Cairo',sans-serif;font-size:.92rem;transition:.2s;letter-spacing:.2px;}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15);}
+.btn:active{transform:translateY(0);}
+.btn-success{background:linear-gradient(135deg,#16a34a,#15803d);color:white;}
+.btn-main{background:linear-gradient(135deg,#003580,#1a4a9c);color:white;}
+.btn-accept{background:linear-gradient(135deg,#d97706,#b45309);color:white;font-size:1rem;border-bottom:3px solid #92400e;}
+.btn-dark{background:linear-gradient(135deg,#0f172a,#1e293b);color:#4ade80;font-family:'IBM Plex Mono',monospace;}
+
+/* WAITING / STATUS */
+.waiting{text-align:center;padding:40px 20px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px dashed #fcd34d;border-radius:14px;color:#92400e;font-weight:700;font-size:.92rem;}
+.waiting .w-icon{font-size:2rem;margin-bottom:8px;}
+.hidden-section{display:none;margin-top:24px;border-top:2px dashed var(--border);padding-top:24px;}
+hr{border:0;border-top:1px solid var(--border);margin:24px 0;}
+.section-badge{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:white;font-size:.72rem;padding:4px 14px;border-radius:20px;margin-bottom:12px;font-weight:800;letter-spacing:.3px;}
+.parse-status{padding:8px 13px;border-radius:9px;font-size:.78rem;font-weight:700;margin-bottom:8px;}
+.parse-ok{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}
+.parse-warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a;}
+.baggage-row{display:flex;gap:10px;margin-top:12px;}
+.baggage-row>div{flex:1;}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>✈️ Al-Mosafer Smart Tool</h1>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="reset-btn" onclick="resetAll()">🔄 Reset</button>
+    <button class="lang-btn active" onclick="setLang('ar')">🇸🇦 AR</button>
+    <button class="lang-btn" onclick="setLang('en')">🇬🇧 EN</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="sidebar">
+    <div class="card">
+      <div class="card-header"><span>📋</span><h3 id="lbl-flight-details">1. تفاصيل الرحلة</h3></div>
+      <details class="fmt-helper">
+        <summary id="lbl-fmt-helper">أمثلة على صيغ شركات الطيران المدعومة</summary>
+        <div class="fmt-tabs" id="fmt-tabs"></div>
+        <div id="fmt-examples"></div>
+      </details>
+      <label id="lbl-paste">الصق نص الرحلة (أي صيغة) *</label>
+      <textarea id="rawSeg" oninput="runAll()" placeholder="الصق نص الرحلة هنا — يدعم كل الصيغ..."></textarea>
+      <div id="parseStatus"></div>
+      <div id="parsedFlights" class="parsed-flights"></div>
+      <div class="baggage-row">
+        <div><label id="lbl-hand">حقيبة يد</label><input type="text" id="bHand" value="7KG" oninput="runAll()"></div>
+        <div><label id="lbl-check">حقيبة شحن</label><input type="text" id="bCheck" value="20KG" oninput="runAll()"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span>💰</span><h3 id="lbl-fees">2. الرسوم والحسابات</h3></div>
+      <label id="lbl-fare">إجمالي الرسوم على موقع شركة الطيران</label>
+      <input type="number" id="totalFare" placeholder="0.00" oninput="runAll()">
+      <div class="grid-2" style="margin-top:8px;">
+        <div>
+          <label id="lbl-noshow" style="display:flex;align-items:center;gap:6px;"><span id="lbl-noshow-text">وقت النو شو</span>
+            <span id="nsBadge" style="font-size:.67rem;padding:2px 9px;border-radius:12px;background:#94a3b8;color:white;font-weight:700;letter-spacing:.2px;transition:.3s;">—</span>
+          </label>
+          <input type="number" id="nsValue" value="90" oninput="runAll()">
+        </div>
+        <div><label id="lbl-nsunit">الوحدة</label>
+          <select id="nsUnit" onchange="runAll()">
+            <option value="min" data-ar="دقيقة" data-en="minutes">دقيقة / Minutes</option>
+            <option value="hr" data-ar="ساعة" data-en="hours">ساعة / Hours</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-3" style="margin-top:8px;">
+        <div><label id="lbl-pax">مسافرين</label><input type="number" id="paxCount" value="1" min="1" oninput="runAll()"></div>
+        <div><label id="lbl-curr">العملة</label>
+          <select id="currency" onchange="runAll()">
+            <option value="SAR">SAR</option><option value="AED">AED</option>
+            <option value="KWD">KWD</option><option value="EGP">EGP</option>
+            <option value="USD">USD</option><option value="INR">INR</option>
+          </select>
+        </div>
+        <div><label id="lbl-trip" style="display:flex;align-items:center;gap:6px;"><span id="lbl-trip-text">نوع الرحلة</span>
+            <span id="tripBadge" style="font-size:.67rem;padding:2px 9px;border-radius:12px;background:#94a3b8;color:white;font-weight:700;letter-spacing:.2px;transition:.3s;">—</span>
+          </label>
+          <select id="tripType" onchange="runAll()">
+            <option value="domestic">داخلية (40.25)</option>
+            <option value="international">دولية (50.00)</option>
+          </select>
+        </div>
+      </div>
+      <div id="paxNamesWrap" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <div id="waitingMsg" class="waiting"><div class="w-icon">⏳</div><span id="lbl-waiting">يرجى إدخال تفاصيل الرحلة وسعر البوابة...</span></div>
+      <div id="calcResults" style="display:none;">
+        <div class="section-badge" id="lbl-quote-badge">عرض السعر للعميل</div>
+        <div id="quoteAr" class="msg-box" data-lang="العرض العربي"></div>
+        <div id="quoteEn" class="msg-box" data-lang="English Quote" dir="ltr"></div>
+        <button class="btn btn-success" onclick="copyText('quoteAr',this)" style="margin-bottom:4px;" data-ar="نسخ العرض العربي ✂️" data-en="Copy Arabic Quote ✂️">نسخ العرض العربي ✂️</button>
+        <button class="btn btn-main" onclick="copyText('quoteEn',this)" style="margin-bottom:16px;" data-ar="نسخ العرض الإنجليزي ✂️" data-en="Copy English Quote ✂️">Copy English Quote ✂️</button>
+        <button id="acceptBtn" class="btn btn-accept" onclick="showHiddenDetails()">✅ <span id="lbl-client-accept">العميل وافق — عرض التفاصيل الكاملة</span></button>
+        <div id="detailsSection" class="hidden-section">
+          <div class="section-badge">Internal Log</div>
+          <div id="internalLog" class="msg-box internal-box" dir="ltr" data-lang="Internal Record"></div>
+          <button class="btn btn-dark" onclick="copyText('internalLog',this)" style="margin-bottom:20px;" data-ar="📋 نسخ السجل الداخلي" data-en="📋 Copy Internal Log">📋 Copy Internal Log</button>
+          <hr>
+          <div class="section-badge" id="lbl-confirm-badge">التأكيد النهائي للعميل</div>
+          <div id="confirmAr" class="msg-box" data-lang="تأكيد العميل (عربي)"></div>
+          <button class="btn btn-success" onclick="copyText('confirmAr',this)" data-ar="نسخ التأكيد العربي ✂️" data-en="Copy Arabic Confirmation ✂️">نسخ التأكيد العربي ✂️</button>
+          <div id="confirmEn" class="msg-box" data-lang="Customer Confirmation (EN)" dir="ltr" style="margin-top:16px;"></div>
+          <button class="btn btn-main" onclick="copyText('confirmEn',this)" data-ar="نسخ التأكيد الإنجليزي ✂️" data-en="Copy English Confirmation ✂️">Copy English Confirmation ✂️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════════════════════
+const airportMap={
+  "TUU":{ar:"تبوك",en:"Tabuk"},"AJF":{ar:"الجوف",en:"Al-Jouf"},"EAM":{ar:"نجران",en:"Najran"},
+  "HOF":{ar:"الأحساء",en:"Al-Ahsa"},"RAE":{ar:"رفحاء",en:"Rafha"},"WAE":{ar:"وادي الدواسر",en:"Wadi Al-Dawasir"},
+  "SHW":{ar:"شرورة",en:"Sharurah"},"ABT":{ar:"الباحة",en:"Al-Baha"},"BHH":{ar:"بيشة",en:"Bisha"},
+  "DWD":{ar:"الدوادمي",en:"Dawadmi"},"AKH":{ar:"القيصومة",en:"Al-Qaysumah"},"TUI":{ar:"طريف",en:"Turaif"},
+  "ULH":{ar:"العُلا",en:"Al-Ula"},"GOP":{ar:"غوراكبور",en:"Gorakhpur"},"BBI":{ar:"بوبانيسوار",en:"Bhubaneswar"},
+  "VNS":{ar:"فاراناسي",en:"Varanasi"},"IXR":{ar:"رانشي",en:"Ranchi"},
+  "DMM":{ar:"الدمام",en:"Dammam"},"RUH":{ar:"الرياض",en:"Riyadh"},"JED":{ar:"جدة",en:"Jeddah"},
+  "HMB":{ar:"سوهاج",en:"Sohag"},"CAI":{ar:"القاهرة",en:"Cairo"},"KWI":{ar:"الكويت",en:"Kuwait City"},
+  "DXB":{ar:"دبي",en:"Dubai"},"SHJ":{ar:"الشارقة",en:"Sharjah"},"AUH":{ar:"أبوظبي",en:"Abu Dhabi"},
+  "MED":{ar:"المدينة المنورة",en:"Madinah"},"URY":{ar:"القريات",en:"Gurayat"},"TIF":{ar:"الطائف",en:"Taif"},
+  "AHB":{ar:"أبها",en:"Abha"},"GIZ":{ar:"جازان",en:"Jazan"},"YNB":{ar:"ينبع",en:"Yanbu"},
+  "BOM":{ar:"مومباي",en:"Mumbai"},"DEL":{ar:"دلهي",en:"Delhi"},"AMD":{ar:"أحمداباد",en:"Ahmedabad"},
+  "CCJ":{ar:"كاليكوت",en:"Kozhikode"},"COK":{ar:"كوتشي",en:"Kochi"},"MAA":{ar:"تشيناي",en:"Chennai"},
+  "BLR":{ar:"بنغالور",en:"Bengaluru"},"HYD":{ar:"حيدراباد",en:"Hyderabad"},
+  "AMM":{ar:"عمّان",en:"Amman"},"BEY":{ar:"بيروت",en:"Beirut"},"IST":{ar:"إسطنبول",en:"Istanbul"},
+  "LHR":{ar:"لندن",en:"London"},"CDG":{ar:"باريس",en:"Paris"},"FRA":{ar:"فرانكفورت",en:"Frankfurt"},
+  "ICN":{ar:"سيول",en:"Seoul"},"NRT":{ar:"طوكيو",en:"Tokyo"},"KUL":{ar:"كوالالمبور",en:"Kuala Lumpur"},
+  "SIN":{ar:"سنغافورة",en:"Singapore"},"BKK":{ar:"بانكوك",en:"Bangkok"},"CMB":{ar:"كولومبو",en:"Colombo"},
+  "MCT":{ar:"مسقط",en:"Muscat"},"BAH":{ar:"البحرين",en:"Bahrain"},"DOH":{ar:"الدوحة",en:"Doha"},
+  "ADD":{ar:"أديس أبابا",en:"Addis Ababa"},"NBO":{ar:"نيروبي",en:"Nairobi"},
+  "ALX":{ar:"الإسكندرية",en:"Alexandria"},"HRG":{ar:"الغردقة",en:"Hurghada"},
+  "SSH":{ar:"شرم الشيخ",en:"Sharm El Sheikh"},"LXR":{ar:"الأقصر",en:"Luxor"},"ASW":{ar:"أسوان",en:"Aswan"},
+  "BGW":{ar:"بغداد",en:"Baghdad"},"KHI":{ar:"كراتشي",en:"Karachi"},"LHE":{ar:"لاهور",en:"Lahore"},
+  "ISB":{ar:"إسلام آباد",en:"Islamabad"},"PEW":{ar:"بيشاور",en:"Peshawar"},"MUX":{ar:"ملتان",en:"Multan"},
+  "SKT":{ar:"سيالكوت",en:"Sialkot"},"DAC":{ar:"دكا",en:"Dhaka"},"KTM":{ar:"كاتماندو",en:"Kathmandu"},
+  "MLE":{ar:"ماليه",en:"Male"},"TRV":{ar:"تيروفانانتابورام",en:"Thiruvananthapuram"},
+  "COK":{ar:"كوتشي",en:"Kochi"},"IXE":{ar:"مانغالور",en:"Mangaluru"},"GOI":{ar:"غوا",en:"Goa"},
+  "PNQ":{ar:"بونا",en:"Pune"},"NAG":{ar:"ناغبور",en:"Nagpur"},"JAI":{ar:"جيبور",en:"Jaipur"},
+  "LKO":{ar:"لاكناو",en:"Lucknow"},"PAT":{ar:"باتنا",en:"Patna"},"GAU":{ar:"غواهاتي",en:"Guwahati"},
+  "CCU":{ar:"كولكاتا",en:"Kolkata"},"IXC":{ar:"شانديغار",en:"Chandigarh"},"ATQ":{ar:"أمريتسار",en:"Amritsar"},
+  "SXR":{ar:"سرينغار",en:"Srinagar"},"IDR":{ar:"إندور",en:"Indore"},"IXJ":{ar:"جامو",en:"Jammu"},
+  "PEK":{ar:"بكين",en:"Beijing"},"PVG":{ar:"شنغهاي",en:"Shanghai"},"CAN":{ar:"غوانغتشو",en:"Guangzhou"},
+  "HKG":{ar:"هونغ كونغ",en:"Hong Kong"},"TPE":{ar:"تايبيه",en:"Taipei"},"MNL":{ar:"مانيلا",en:"Manila"},
+  "CGK":{ar:"جاكرتا",en:"Jakarta"},"SGN":{ar:"هوشي مينه",en:"Ho Chi Minh City"},"BKK":{ar:"بانكوك",en:"Bangkok"},
+  "FCO":{ar:"روما",en:"Rome"},"BCN":{ar:"برشلونة",en:"Barcelona"},"MAD":{ar:"مدريد",en:"Madrid"},
+  "AMS":{ar:"أمستردام",en:"Amsterdam"},"ZRH":{ar:"زيوريخ",en:"Zurich"},"MXP":{ar:"ميلانو",en:"Milan"},
+  "ATH":{ar:"أثينا",en:"Athens"},"TLV":{ar:"تل أبيب",en:"Tel Aviv"},
+  "JFK":{ar:"نيويورك",en:"New York"},"LAX":{ar:"لوس أنجلوس",en:"Los Angeles"},
+  "ORD":{ar:"شيكاغو",en:"Chicago"},"YYZ":{ar:"تورنتو",en:"Toronto"},
+  "SYD":{ar:"سيدني",en:"Sydney"},"MEL":{ar:"ملبورن",en:"Melbourne"},
+  "JNB":{ar:"جوهانسبرغ",en:"Johannesburg"},"CPT":{ar:"كيب تاون",en:"Cape Town"},
+  "VIE":{ar:"فيينا",en:"Vienna"},"BRU":{ar:"بروكسل",en:"Brussels"},"GVA":{ar:"جنيف",en:"Geneva"},
+  "MAN":{ar:"مانشستر",en:"Manchester"},"MUC":{ar:"ميونخ",en:"Munich"},
+  "OSL":{ar:"أوسلو",en:"Oslo"},"ARN":{ar:"ستوكهولم",en:"Stockholm"},
+  "CPH":{ar:"كوبنهاغن",en:"Copenhagen"},"HEL":{ar:"هلسنكي",en:"Helsinki"},
+  "WAW":{ar:"وارسو",en:"Warsaw"},"PRG":{ar:"براغ",en:"Prague"},
+  "SVO":{ar:"موسكو",en:"Moscow"},"TAS":{ar:"طشقند",en:"Tashkent"},
+  "GYD":{ar:"باكو",en:"Baku"},"TBS":{ar:"تبليسي",en:"Tbilisi"},"EVN":{ar:"يريفان",en:"Yerevan"},
+  "THR":{ar:"طهران",en:"Tehran"},"IKA":{ar:"طهران",en:"Tehran"},"MHD":{ar:"مشهد",en:"Mashhad"},
+  "DFW":{ar:"دالاس",en:"Dallas"},"IAH":{ar:"هيوستن",en:"Houston"},"MIA":{ar:"ميامي",en:"Miami"},
+  "BOS":{ar:"بوسطن",en:"Boston"},"SFO":{ar:"سان فرانسيسكو",en:"San Francisco"},
+  "SEA":{ar:"سياتل",en:"Seattle"},"LAS":{ar:"لاس فيغاس",en:"Las Vegas"},
+  "DEN":{ar:"دنفر",en:"Denver"},"ATL":{ar:"أتلانتا",en:"Atlanta"},"MCO":{ar:"أورلاندو",en:"Orlando"},
+  "IAD":{ar:"واشنطن",en:"Washington DC"},"EWR":{ar:"نيواركس",en:"Newark"},
+  "MSP":{ar:"مينيابوليس",en:"Minneapolis"},"DTW":{ar:"ديترويت",en:"Detroit"},
+  "CLT":{ar:"شارلوت",en:"Charlotte"},"PHX":{ar:"فينيكس",en:"Phoenix"}
+};
+
+const airDB={
+  'SV':{ar:'الخطوط السعودية',en:'Saudia'},
+  'F3':{ar:'طيران أديل',en:'Flyadeal'},
+  'XY':{ar:'طيران ناس',en:'flynas'},
+  'G9':{ar:'العربية للطيران',en:'Air Arabia'},
+  'E5':{ar:'العربية للطيران مصر',en:'Air Arabia Egypt'},
+  'FZ':{ar:'فلاي دبي',en:'Flydubai'},
+  'J9':{ar:'طيران الجزيرة',en:'Jazeera Airways'},
+  '6E':{ar:'إنديغو',en:'IndiGo'},
+  'AI':{ar:'إير إنديا',en:'Air India'},
+  'UK':{ar:'فيستارا',en:'Vistara'},
+  'IX':{ar:'إير إنديا إكسبريس',en:'Air India Express'},
+  'SG':{ar:'سبايسجيت',en:'SpiceJet'},
+  'I5':{ar:'إير آسيا إنديا',en:'AirAsia India'},
+  'QP':{ar:'أكاسا إير',en:'Akasa Air'},
+  'QR':{ar:'قطر',en:'Qatar Airways'},
+  'EK':{ar:'طيران الإمارات',en:'Emirates'},
+  'EY':{ar:'الاتحاد',en:'Etihad Airways'},
+  'MS':{ar:'مصر للطيران',en:'EgyptAir'},
+  'SM':{ar:'إير كايرو',en:'Air Cairo'},
+  'NP':{ar:'النيل للطيران',en:'Nile Air'},
+  'UJ':{ar:'المصرية العالمية',en:'AlMasria Universal'},
+  'ME':{ar:'طيران الشرق الأوسط',en:'Middle East Airlines'},
+  'KU':{ar:'الخطوط الكويتية',en:'Kuwait Airways'},
+  'RJ':{ar:'الملكية الأردنية',en:'Royal Jordanian'},
+  'GF':{ar:'طيران الخليج',en:'Gulf Air'},
+  'WY':{ar:'عُمانية',en:'Oman Air'},
+  'PC':{ar:'بيغاسوس',en:'Pegasus'},
+  'TK':{ar:'الخطوط التركية',en:'Turkish Airlines'},
+  'PK':{ar:'باكستان إنترناشيونال',en:'PIA'},
+  'ET':{ar:'إثيوبيا',en:'Ethiopian Airlines'},
+  'KQ':{ar:'كينيا',en:'Kenya Airways'},
+  'VJ':{ar:'فيت جيت',en:'VietJet'},
+  'VN':{ar:'فيتنام',en:'Vietnam Airlines'},
+  'MH':{ar:'ماليزيا',en:'Malaysia Airlines'},
+  'SQ':{ar:'سنغافورة',en:'Singapore Airlines'},
+  'TG':{ar:'تايلاند',en:'Thai Airways'},
+  'CX':{ar:'كاثاي',en:'Cathay Pacific'},
+  'JL':{ar:'جابان إيرلاينز',en:'Japan Airlines'},
+  'NH':{ar:'أول نيبون',en:'ANA'},
+  'KE':{ar:'كوريان إيرلاينز',en:'Korean Air'},
+  'MU':{ar:'تشاينا إيسترن',en:'China Eastern'},
+  'CZ':{ar:'ساوذرن',en:'China Southern'},
+  'CA':{ar:'إير تشاينا',en:'Air China'},
+  'AF':{ar:'الخطوط الفرنسية',en:'Air France'},
+  'BA':{ar:'بريتيش',en:'British Airways'},
+  'LH':{ar:'لوفتهانزا',en:'Lufthansa'},
+  'KL':{ar:'كيه إل إم',en:'KLM'},
+  'IB':{ar:'إيبيريا',en:'Iberia'},
+  'LX':{ar:'سويس',en:'Swiss'},
+  'OS':{ar:'أوستريان',en:'Austrian'},
+  'SK':{ar:'سكانديناف',en:'SAS'},
+  'AY':{ar:'فين إير',en:'Finnair'},
+  'U2':{ar:'إيزي جيت',en:'easyJet'},
+  'FR':{ar:'رايان إير',en:'Ryanair'},
+  'W6':{ar:'ويز إير',en:'Wizz Air'},
+  'AA':{ar:'أمريكان',en:'American Airlines'},
+  'UA':{ar:'يونايتد',en:'United Airlines'},
+  'DL':{ar:'دلتا',en:'Delta'},
+  'WN':{ar:'ساوثويست',en:'Southwest'},
+  'B6':{ar:'جيت بلو',en:'JetBlue'},
+  'AS':{ar:'ألاسكا',en:'Alaska Airlines'},
+  'AC':{ar:'إير كندا',en:'Air Canada'},
+  'QF':{ar:'قانتاس',en:'Qantas'},
+  'NZ':{ar:'نيوزيلاند',en:'Air New Zealand'},
+  'SA':{ar:'ساوث أفريكان',en:'South African Airways'}
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  SAUDI AIRPORTS — for domestic/international auto-detection
+// ══════════════════════════════════════════════════════════════════
+const saudiAirports=new Set([
+  'RUH','JED','DMM','MED','TIF','AHB','GIZ','YNB','TUU','AJF','EAM',
+  'HOF','RAE','WAE','SHW','ABT','BHH','DWD','AKH','TUI','ULH','URY'
+]);
+
+function autoDetectTripType(flights){
+  if(!flights||!flights.length)return;
+  const tripEl=document.getElementById('tripType');
+  const tripBadgeEl=document.getElementById('tripBadge');
+  // Domestic = ALL origin & destination airports are Saudi
+  const allSaudi=flights.every(f=>saudiAirports.has(f.fromCode)&&saudiAirports.has(f.toCode));
+  const hasUnknown=flights.some(f=>f.fromCode==='??'||f.toCode==='??');
+  if(hasUnknown)return; // can't determine, leave as-is
+  tripEl.value=allSaudi?'domestic':'international';
+  if(tripBadgeEl){
+    tripBadgeEl.textContent=allSaudi?'✅ داخلية':'✅ دولية';
+    tripBadgeEl.style.background=allSaudi?'#16a34a':'#003580';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  NO-SHOW TIME LOOKUP TABLE
+// ══════════════════════════════════════════════════════════════════
+const noShowRules=[
+  ["A3","4"],["AH","3"],["AC","2"],["AI","24"],["MK","24"],
+  ["SM","24"],["AZ","3"],["UJ","24"],["GP","148 or 48 or 4 Check Rules"],
+  ["UH","24"],["OS","24"],["J2","1"],["BA","6"],["SN","24"],
+  ["CX","24"],["DL","Check Rules"],["MS","24"],["EK","1"],
+  ["ET","24"],["EY","1"],["FZ","24"],["XY","4"],["GA","3"],
+  ["GF","24"],["R5","24"],["RQ","24"],["KQ","24"],["AF","1"],
+  ["KL","1"],["KU","3"],["LH","1"],["MH","3"],
+  ["ME","24 or 48 or 1 Check Rules"],["NE","24 or 48 Check Rules"],
+  ["NP","24 or 48 or 72 Check Rules"],["BJ","24"],["WY","3"],
+  ["PK","4"],["PC","2"],["PR","4 or 24 Check Rules"],["QR","3"],
+  ["AT","24"],["RJ","4 for Economy / 18 for business"],["SV","Departure time"],
+  ["TR","24"],["ER","24"],["SQ","24"],["UL","24"],["LX","24"],
+  ["TG","Check Rules"],["TK","3"],["UA","1"],
+  ["F3","90 Mins \"Update the template\" / Non refundable"],["FT","24"],
+  ["6E","4"],["G9","Updated on Ticket Copy"],["E5","24"],
+  ["3L","Updated on Ticket Copy"],["3O","Updated on Ticket Copy"],
+  ["IX","Before 96 - before 24 - less than 24 Check rules"],["J5","Departure time"],
+  ["J9","8 for Reissue / 24 for Refund"],["FR","2 for reissue / Non refundable"],
+  ["OV","24"],["G8","8"]
+];
+const noShowMap=Object.fromEntries(noShowRules);
+
+function applyNoShowRule(airlineCode){
+  const rule=noShowMap[airlineCode];
+  if(!rule)return;
+  const nsValueEl=document.getElementById('nsValue');
+  const nsUnitEl=document.getElementById('nsUnit');
+  const nsBadgeEl=document.getElementById('nsBadge');
+
+  // Check for minutes (e.g. "90 Mins")
+  const minsMatch=rule.match(/^(\d+)\s*mins?/i);
+  if(minsMatch){
+    nsValueEl.value=parseInt(minsMatch[1]);
+    nsUnitEl.value='min';
+    if(nsBadgeEl){nsBadgeEl.textContent='✅ '+airlineCode+' ('+rule+')';nsBadgeEl.style.background='#d97706';}
+    return;
+  }
+  // Simple numeric hours (e.g. "24", "3", "1")
+  const simpleNum=rule.match(/^(\d+)$/);
+  if(simpleNum){
+    nsValueEl.value=parseInt(simpleNum[1]);
+    nsUnitEl.value='hr';
+    if(nsBadgeEl){nsBadgeEl.textContent='✅ '+airlineCode;nsBadgeEl.style.background='#16a34a';}
+    return;
+  }
+  // Complex / "Check Rules" — show badge warning, leave field as-is
+  if(nsBadgeEl){
+    nsBadgeEl.textContent='⚠️ '+airlineCode+': '+rule;
+    nsBadgeEl.style.background='#d97706';
+  }
+}
+
+const monthMapAr={'يناير':'JAN','فبراير':'FEB','مارس':'MAR','أبريل':'APR','مايو':'MAY','يونيو':'JUN','يوليو':'JUL','أغسطس':'AUG','سبتمبر':'SEP','أكتوبر':'OCT','نوفمبر':'NOV','ديسمبر':'DEC','شباط':'FEB','آذار':'MAR','نيسان':'APR','أيار':'MAY','حزيران':'JUN','تموز':'JUL','آب':'AUG','أيلول':'SEP','تشرين الأول':'OCT','تشرين الثاني':'NOV','كانون الأول':'DEC','كانون الثاني':'JAN'};
+const monthMapEn={'jan':'JAN','feb':'FEB','mar':'MAR','apr':'APR','may':'MAY','jun':'JUN','jul':'JUL','aug':'AUG','sep':'SEP','oct':'OCT','nov':'NOV','dec':'DEC','january':'JAN','february':'FEB','march':'MAR','april':'APR','june':'JUN','july':'JUL','august':'AUG','september':'SEP','october':'OCT','november':'NOV','december':'DEC'};
+const monthAr={'JAN':'يناير','FEB':'فبراير','MAR':'مارس','APR':'أبريل','MAY':'مايو','JUN':'يونيو','JUL':'يوليو','AUG':'أغسطس','SEP':'سبتمبر','OCT':'أكتوبر','NOV':'نوفمبر','DEC':'ديسمبر'};
+
+// ══════════════════════════════════════════════════════════════════
+//  FORMAT EXAMPLES
+// ══════════════════════════════════════════════════════════════════
+const formats=[
+  {id:'vertical',label:'Vertical (Flyadeal style)',example:`Departure Flight\n30 Apr 2026\n15:50\nTabuk\n(TUU)\nF3 206\n1H 50M\nAirbus A320\n17:40\nRiyadh\n(RUH)\nTerminal 3`},
+  {id:'stopover',label:'Connecting / رحلة بتوقف',example:`Departure flight\nSat, 02 May\nRUH Riyadh (T5)\n17:10\n6E 94\n00:40\nHYD Hyderabad\n10h 30m Layover\n6E 886\n11:10\nHYD Hyderabad\n13:15\nGOP Gorakhpur`},
+  {id:'flyadeal',label:'Flyadeal',example:`Flight from Riyadh to Jeddah\nFlyadeal F3-103\nDeparture: Saturday 25th April 2026, 05:55\nRUH Riyadh - Terminal 3\nArrival: 07:45\nJED Jeddah - Terminal 1`},
+  {id:'airarabia',label:'Air Arabia',example:`Sharjah → Dubai\nG9 214 | non-stop\nDep: 14 Apr 2026 09:15 SHJ\nArr: 14 Apr 2026 10:15 DXB`},
+  {id:'flydubai',label:'Flydubai',example:`Dubai (DXB) to Kuwait (KWI)\nFZ 891\nDeparture: 20 May 2026 at 11:30\nArrival: 20 May 2026 at 12:45`},
+  {id:'arabic',label:'نص عربي',example:`من الرياض (RUH) صالة 3 إلى جدة (JED) صالة 1\nالإقلاع: السبت 25 أبريل 2026 الساعة 05:55\nالوصول: 07:45\nطيران أديل F3 103`},
+  {id:'gds',label:'GDS / Amadeus',example:`1 SV 123 Y 25APR 7 RUHJED HK1 0555 0745`}
+];
+
+// ══════════════════════════════════════════════════════════════════
+//  LANGUAGE
+// ══════════════════════════════════════════════════════════════════
+let currentLang='ar';
+const T={
+  ar:{'lbl-flight-details':'1. تفاصيل الرحلة','lbl-fmt-helper':'أمثلة على صيغ شركات الطيران المدعومة','lbl-paste':'الصق نص الرحلة *','lbl-hand':'حقيبة يد','lbl-check':'حقيبة شحن','lbl-fees':'2. الرسوم والحسابات','lbl-fare':'إجمالي الرسوم على موقع شركة الطيران','lbl-noshow-text':'وقت النو شو','lbl-nsunit':'الوحدة','lbl-pax':'مسافرين','lbl-curr':'العملة','lbl-trip-text':'نوع الرحلة','lbl-waiting':'يرجى إدخال تفاصيل الرحلة وسعر البوابة...','lbl-quote-badge':'عرض السعر للعميل','lbl-client-accept':'العميل وافق — عرض التفاصيل الكاملة','lbl-confirm-badge':'التأكيد النهائي للعميل','use-example':'استخدم هذا المثال','lbl-paxname-text':'اسم المسافر','opt-badge':'اختياري'},
+  en:{'lbl-flight-details':'1. Flight Details','lbl-fmt-helper':'Supported airline format examples','lbl-paste':'Paste flight text *','lbl-hand':'Hand Baggage','lbl-check':'Checked Baggage','lbl-fees':'2. Fees & Calculations','lbl-fare':'Total charges on the airline portal','lbl-noshow-text':'No-Show Time','lbl-nsunit':'Unit','lbl-pax':'Pax','lbl-curr':'Currency','lbl-trip-text':'Trip Type','lbl-waiting':'Please enter flight details and gateway fare...','lbl-quote-badge':'Price Quote for Customer','lbl-client-accept':'Customer Accepted — Show Full Details','lbl-confirm-badge':'Final Customer Confirmation','use-example':'Use this example','lbl-paxname-text':'Passenger Name','opt-badge':'Optional'}
+};
+
+function setLang(lang){
+  currentLang=lang;
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.lang-btn').forEach(b=>{if(b.textContent.includes(lang==='ar'?'AR':'EN'))b.classList.add('active');});
+  document.documentElement.lang=lang;
+  document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+
+  // Translate all labelled elements directly
+  Object.keys(T[lang]).forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=T[lang][id];});
+
+  // Placeholders
+  document.getElementById('rawSeg').placeholder=lang==='ar'?'الصق نص الرحلة هنا — يدعم كل الصيغ...':'Paste flight text here — all formats supported...';
+
+  // tripType options
+  const tt=document.getElementById('tripType');
+  tt.options[0].text=lang==='ar'?'داخلية (40.25)':'Domestic (40.25)';
+  tt.options[1].text=lang==='ar'?'دولية (50.00)':'International (50.00)';
+
+  // nsUnit options
+  const nu=document.getElementById('nsUnit');
+  nu.options[0].text=lang==='ar'?'دقيقة / Minutes':'Minutes';
+  nu.options[1].text=lang==='ar'?'ساعة / Hours':'Hours';
+
+  // Reset button
+  document.querySelector('.reset-btn').textContent=lang==='ar'?'🔄 إعادة تعيين':'🔄 Reset';
+
+  // AI button
+  document.getElementById('aiParseBtnLabel').textContent=lang==='ar'?'تحليل وترجمة بالذكاء الاصطناعي':'AI Translate & Analyse';
+
+  // Copy / action buttons with data-ar / data-en
+  document.querySelectorAll('[data-ar][data-en]').forEach(btn=>{
+    btn.textContent=lang==='ar'?btn.getAttribute('data-ar'):btn.getAttribute('data-en');
+  });
+
+  // Internal Log section badge (no id)
+  const ilBadge=document.querySelector('#detailsSection .section-badge');
+  if(ilBadge)ilBadge.textContent=lang==='ar'?'السجل الداخلي':'Internal Log';
+
+  buildFormatHelper();runAll();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  FORMAT HELPER
+// ══════════════════════════════════════════════════════════════════
+let activeFormat=formats[0].id;
+function buildFormatHelper(){
+  const tabsEl=document.getElementById('fmt-tabs'),exEl=document.getElementById('fmt-examples');
+  tabsEl.innerHTML='';exEl.innerHTML='';
+  formats.forEach(f=>{
+    const tab=document.createElement('button');
+    tab.className='fmt-tab'+(f.id===activeFormat?' active':'');
+    tab.textContent=f.label;
+    tab.onclick=()=>{activeFormat=f.id;buildFormatHelper();};
+    tabsEl.appendChild(tab);
+    const ex=document.createElement('div');
+    ex.className='fmt-example'+(f.id===activeFormat?' active':'');
+    ex.textContent=f.example;
+    exEl.appendChild(ex);
+    if(f.id===activeFormat){
+      const btn=document.createElement('button');
+      btn.className='use-example-btn';
+      btn.textContent=T[currentLang]['use-example'];
+      btn.onclick=()=>{document.getElementById('rawSeg').value=f.example;runAll();};
+      exEl.appendChild(btn);
+    }
+  });
+}
+buildFormatHelper();
+
+// ══════════════════════════════════════════════════════════════════
+//  PARSER UTILITIES
+// ══════════════════════════════════════════════════════════════════
+function numToMon(n){return['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][n-1]||'JAN';}
+
+function parseTime(h,m,ap){
+  let hr=parseInt(h,10);const mi=String(m).padStart(2,'0');
+  const a=(ap||'').toLowerCase().trim();
+  if((a==='pm'||a==='م'||a==='مساءً')&&hr<12)hr+=12;
+  if((a==='am'||a==='ص'||a==='صباحاً')&&hr===12)hr=0;
+  return String(hr).padStart(2,'0')+':'+mi;
+}
+
+function extractTimes(text){
+  const res=[];
+  const re=/(\d{1,2}):(\d{2})(?:\s*(AM|PM|صباحاً|مساءً|ص|م))?/gi;
+  let m;
+  while((m=re.exec(text))!==null)res.push(parseTime(m[1],m[2],m[3]));
+  if(res.length===0){
+    const re2=/\b([01]\d|2[0-3])([0-5]\d)\b/g;
+    while((m=re2.exec(text))!==null)res.push(m[1]+':'+m[2]);
+  }
+  return res;
+}
+
+function extractDate(text){
+  const yr=new Date().getFullYear().toString();
+  let dm;
+  // 1) 25 April 2026
+  dm=text.match(/(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,})\s+(\d{4})/);
+  if(dm){const mo=monthMapEn[dm[2].toLowerCase()]||dm[2].substring(0,3).toUpperCase();return{day:dm[1].padStart(2,'0'),mon:mo,year:dm[3]};}
+  // 2) Arabic: 25 أبريل 2026
+  for(const[k,v]of Object.entries(monthMapAr)){const re=new RegExp('(\\d{1,2})\\s+'+k+'(?:\\s+(\\d{4}))?');const am=text.match(re);if(am)return{day:am[1].padStart(2,'0'),mon:v,year:am[2]||yr};}
+  // 3) DD/MM/YYYY
+  dm=text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(dm)return{day:dm[1].padStart(2,'0'),mon:numToMon(parseInt(dm[2])),year:dm[3]};
+  // 4) GDS: 25APR or 25APR26
+  dm=text.match(/\b(\d{2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(\d{2,4})?\b/i);
+  if(dm){const y=dm[3]?(dm[3].length===2?'20'+dm[3]:dm[3]):yr;return{day:dm[1],mon:dm[2].toUpperCase(),year:y};}
+  // 5) April 25, 2026
+  dm=text.match(/([A-Za-z]{3,})\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/);
+  if(dm)return{day:dm[2].padStart(2,'0'),mon:monthMapEn[dm[1].toLowerCase()]||dm[1].substring(0,3).toUpperCase(),year:dm[3]};
+  return{day:'??',mon:'???',year:yr};
+}
+
+function extractAirline(text){
+  // Match known codes with flight number
+  const re=/\b([A-Z0-9]{2})\s?[-]?\s?(\d{2,4})\b/g;
+  let m;
+  while((m=re.exec(text))!==null){
+    const code=m[1].toUpperCase();
+    if(airDB[code])return{code,num:m[2]};
+  }
+  // Match known code without number
+  const allCodes=Object.keys(airDB).sort((a,b)=>b.length-a.length).join('|');
+  const re2=new RegExp('\\b('+allCodes+')\\b','i');
+  const m2=text.match(re2);
+  if(m2){
+    const code=m2[1].toUpperCase();
+    const nm=text.match(new RegExp(m2[1]+'[\\s\\-]?(\\d{2,4})','i'));
+    return{code,num:nm?nm[1]:''};
+  }
+  return{code:'??',num:''};
+}
+
+function extractAirports(text){
+  const hits=[];
+  // Priority 1: (XXX) in parens
+  const re1=/\(([A-Z]{3})\)/g;let m;
+  while((m=re1.exec(text))!==null)if(airportMap[m[1]])hits.push({code:m[1],idx:m.index});
+  // Priority 2: bare code
+  if(hits.length<2){
+    const re2=/\b([A-Z]{3})\b/g;
+    while((m=re2.exec(text))!==null)if(airportMap[m[1]]&&!hits.find(h=>h.code===m[1]))hits.push({code:m[1],idx:m.index});
+  }
+  hits.sort((a,b)=>a.idx-b.idx);
+  const seen=new Set();
+  return hits.filter(h=>{if(seen.has(h.code))return false;seen.add(h.code);return true;});
+}
+
+function extractTerminals(text){
+  const parts=text.split(/\b(arrival|arr|وصول|الوصول)\b/i);
+  const depB=parts[0],arrB=parts.length>1?parts.slice(2).join(''):'';
+  const re=/(?:terminal|صالة|term)[.\s\-:–]*([A-Z]?\d+)/gi;
+  function find(b){const m=re.exec(b);re.lastIndex=0;return m?m[1].replace(/^T/i,''):'';}
+  return{dep:find(depB),arr:find(arrB)};
+}
+
+function parseSeg(text){
+  const airports=extractAirports(text);
+  if(airports.length<2)return null;
+  const fromCode=airports[0].code,toCode=airports[1].code;
+  const airline=extractAirline(text);
+  const times=extractTimes(text);
+  const d=extractDate(text);
+  const terms=extractTerminals(text);
+  const dateAr=d.day!=='??'?`${parseInt(d.day)} ${monthAr[d.mon]||d.mon} ${d.year}`:'??';
+  const dateEn=d.day!=='??'?`${parseInt(d.day)} ${d.mon} ${d.year}`:'??';
+  return{
+    fromCode,toCode,
+    fromAr:airportMap[fromCode]?.ar||fromCode,fromEn:airportMap[fromCode]?.en||fromCode,
+    toAr:airportMap[toCode]?.ar||toCode,toEn:airportMap[toCode]?.en||toCode,
+    time:times[0]||'??:??',arrTime:times[1]||'??:??',
+    day:d.day,mon:d.mon,year:d.year,dateAr,dateEn,
+    airlineCode:airline.code,flightNum:airline.num,
+    airlineAr:airDB[airline.code]?.ar||airline.code,
+    airlineEn:airDB[airline.code]?.en||airline.code,
+    terminal:terms.dep?'T'+terms.dep:'',arrTerminal:terms.arr?'T'+terms.arr:'',
+    stopover:false,layoverAr:'',layoverEn:''
+  };
+}
+
+function smartExtract(text){
+  // Split by flight headers or multiple flight numbers
+  let segs=[];
+  const hRe=/\b(departure\s+flight|return\s+flight|outbound|inbound|رحلة\s+الذهاب|رحلة\s+العودة)\b/gi;
+  const hM=[...text.matchAll(hRe)];
+  if(hM.length>=2){segs=hM.map((h,i)=>text.slice(h.index,i+1<hM.length?hM[i+1].index:text.length));}
+  else{
+    const fnRe=/\b([A-Z0-9]{2})\s?[-]?\s?(\d{2,4})\b/g;
+    const fns=[...text.matchAll(fnRe)].filter(m=>airDB[m[1].toUpperCase()]);
+    const uniq=[...new Set(fns.map(m=>m[1].toUpperCase()+m[2]))];
+    if(uniq.length>=2){
+      let last=0;
+      fns.filter((m,i,a)=>i===0||m[1].toUpperCase()+m[2]!==a[i-1][1].toUpperCase()+a[i-1][2])
+        .forEach((fm,i,a)=>{if(i>0){segs.push(text.slice(last,fm.index));last=fm.index;}});
+      segs.push(text.slice(last));
+    }
+  }
+  if(segs.length===0)segs=[text];
+  const flights=segs.map(s=>parseSeg(s.trim())).filter(Boolean);
+  return flights.length?flights:[parseSeg(text)].filter(Boolean);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════════
+let parsedFlightsData=[],editingIndex=-1;
+
+function renderFlightChips(flights){
+  const el=document.getElementById('parsedFlights'),st=document.getElementById('parseStatus');
+  el.innerHTML='';
+  if(!flights.length){
+    st.innerHTML='';
+    const b=document.getElementById('nsBadge');
+    if(b){b.textContent='—';b.style.background='#94a3b8';}
+    const tb=document.getElementById('tripBadge');
+    if(tb){tb.textContent='—';tb.style.background='#94a3b8';}
+    return;
+  }
+  // Auto-fill no-show time from first flight's airline
+  const firstCode=flights[0].airlineCode;
+  if(firstCode&&firstCode!=='??'){applyNoShowRule(firstCode);}
+  // Auto-detect domestic vs international
+  autoDetectTripType(flights);
+
+  const bad=flights.some(f=>f.fromCode==='??'||f.toCode==='??');
+  st.innerHTML=bad
+    ?`<div class="parse-status parse-warn">⚠️ ${currentLang==='ar'?'بعض البيانات غير مكتملة — راجع أو استخدم زر AI':'Some data incomplete — review or use AI button'}</div>`
+    :`<div class="parse-status parse-ok">✅ ${currentLang==='ar'?`تم التعرف على ${flights.length} رحلة`:`${flights.length} flight(s) recognized`}</div>`;
+  flights.forEach((f,i)=>{
+    if(editingIndex===i){el.appendChild(buildEditCard(f,i));return;}
+    const chip=document.createElement('div');
+    chip.className='flight-chip';
+    chip.innerHTML=`
+      <span class="fc-airline">${f.airlineEn} ${f.flightNum?f.airlineCode+f.flightNum:''}</span>
+      <span class="fc-route">${f.fromCode} → ${f.toCode}</span>
+      <span class="fc-time">✈ ${f.time}${f.arrTime&&f.arrTime!=='??:??'?' → '+f.arrTime:''}</span>
+      <span class="fc-date">📅 ${f.dateEn}</span>
+      ${f.terminal?`<span class="fc-terminal">DEP:${f.terminal}</span>`:''}
+      ${f.arrTerminal?`<span class="fc-terminal">ARR:${f.arrTerminal}</span>`:''}
+      ${f.layoverEn?`<span style="background:#fff3cd;color:#856404;border-radius:5px;padding:2px 7px;font-size:.72rem;">⏳ ${f.layoverEn}</span>`:''}
+      <button class="fc-edit" onclick="startEdit(${i})">${currentLang==='ar'?'تعديل':'Edit'}</button>`;
+    el.appendChild(chip);
+  });
+}
+
+function buildEditCard(f,i){
+  const div=document.createElement('div');div.className='edit-overlay';
+  div.innerHTML=`<strong style="color:var(--primary);font-size:.85rem;">${currentLang==='ar'?'تعديل الرحلة':'Edit Flight'} ${i+1}</strong>
+    <div class="eg">
+      <div><label>From</label><input id="ef_from" value="${f.fromCode}"></div>
+      <div><label>To</label><input id="ef_to" value="${f.toCode}"></div>
+      <div><label>Dep</label><input id="ef_dep" value="${f.time}"></div>
+      <div><label>Arr</label><input id="ef_arr" value="${f.arrTime}"></div>
+      <div><label>Day</label><input id="ef_day" value="${f.day}"></div>
+      <div><label>Mon</label><input id="ef_mon" value="${f.mon}"></div>
+      <div><label>Year</label><input id="ef_year" value="${f.year}"></div>
+      <div><label>Airline</label><input id="ef_air" value="${f.airlineCode}"></div>
+      <div><label>Flight#</label><input id="ef_fn" value="${f.flightNum}"></div>
+      <div><label>Dep T</label><input id="ef_term" value="${f.terminal}"></div>
+      <div><label>Arr T</label><input id="ef_aterm" value="${f.arrTerminal}"></div>
+    </div>
+    <button class="save-btn" onclick="saveEdit(${i})">💾 ${currentLang==='ar'?'حفظ':'Save'}</button>
+    <button class="save-btn" style="background:var(--muted);margin-right:8px;" onclick="cancelEdit()">✖</button>`;
+  return div;
+}
+
+function startEdit(i){editingIndex=i;renderFlightChips(parsedFlightsData);}
+function cancelEdit(){editingIndex=-1;renderFlightChips(parsedFlightsData);}
+function saveEdit(i){
+  const f=parsedFlightsData[i];
+  f.fromCode=document.getElementById('ef_from').value.toUpperCase();
+  f.toCode=document.getElementById('ef_to').value.toUpperCase();
+  f.time=document.getElementById('ef_dep').value;
+  f.arrTime=document.getElementById('ef_arr').value;
+  f.day=document.getElementById('ef_day').value;
+  f.mon=document.getElementById('ef_mon').value.toUpperCase();
+  f.year=document.getElementById('ef_year').value;
+  f.airlineCode=document.getElementById('ef_air').value.toUpperCase();
+  f.flightNum=document.getElementById('ef_fn').value;
+  f.terminal=document.getElementById('ef_term').value;
+  f.arrTerminal=document.getElementById('ef_aterm').value;
+  f.fromAr=airportMap[f.fromCode]?.ar||f.fromCode;f.fromEn=airportMap[f.fromCode]?.en||f.fromCode;
+  f.toAr=airportMap[f.toCode]?.ar||f.toCode;f.toEn=airportMap[f.toCode]?.en||f.toCode;
+  f.airlineAr=airDB[f.airlineCode]?.ar||f.airlineCode;f.airlineEn=airDB[f.airlineCode]?.en||f.airlineCode;
+  f.dateAr=`${parseInt(f.day)} ${monthAr[f.mon]||f.mon} ${f.year}`;
+  f.dateEn=`${parseInt(f.day)} ${f.mon} ${f.year}`;
+  editingIndex=-1;renderFlightChips(parsedFlightsData);buildOutputs();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  TIME FORMATTERS
+// ══════════════════════════════════════════════════════════════════
+function to12En(t){if(!t||t==='??:??')return t;const[h,m]=t.split(':');let hr=parseInt(h);const p=hr>=12?'PM':'AM';if(hr===0)hr=12;else if(hr>12)hr-=12;return`${hr}:${m} ${p}`;}
+function to12Ar(t){if(!t||t==='??:??')return t;const[h,m]=t.split(':');let hr=parseInt(h);const p=hr>=12?'م':'ص';if(hr===0)hr=12;else if(hr>12)hr-=12;return`${hr}:${m} ${p}`;}
+
+// ══════════════════════════════════════════════════════════════════
+//  PAX NAME FIELDS — dynamic per passenger count
+// ══════════════════════════════════════════════════════════════════
+function renderPaxNameFields(){
+  const pax=parseInt(document.getElementById('paxCount').value)||1;
+  const wrap=document.getElementById('paxNamesWrap');
+  // Preserve existing values before re-render
+  const existing=[];
+  wrap.querySelectorAll('input[id^="paxName_"]').forEach(el=>existing.push(el.value));
+  wrap.innerHTML='';
+  const headerLabel=document.createElement('label');
+  headerLabel.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;';
+  const labelSpan=document.createElement('span');
+  labelSpan.id='lbl-paxname-text';
+  labelSpan.textContent=currentLang==='ar'?(pax===1?'اسم المسافر':'أسماء المسافرين'):(pax===1?'Passenger Name':'Passenger Names');
+  const optBadge=document.createElement('span');
+  optBadge.id='opt-badge';
+  optBadge.style.cssText='font-size:.65rem;background:#e0f2fe;color:#0369a1;padding:1px 8px;border-radius:10px;font-weight:700;';
+  optBadge.textContent=currentLang==='ar'?'اختياري':'Optional';
+  headerLabel.appendChild(labelSpan);headerLabel.appendChild(optBadge);
+  wrap.appendChild(headerLabel);
+  for(let i=0;i<pax;i++){
+    const inp=document.createElement('input');
+    inp.type='text';inp.id='paxName_'+i;
+    inp.placeholder=pax===1?(currentLang==='ar'?'مثال: Ahmed Mohamed':'e.g. Ahmed Mohamed'):(currentLang==='ar'?`مسافر ${i+1}`:`Passenger ${i+1}`);
+    inp.style.cssText='background:#fff;margin-bottom:'+(i<pax-1?'6px':'0')+';';
+    inp.value=existing[i]||'';
+    inp.oninput=()=>buildOutputs();
+    wrap.appendChild(inp);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  MAIN RUNNER
+// ══════════════════════════════════════════════════════════════════
+function runAll(){
+  renderPaxNameFields();
+  const raw=document.getElementById('rawSeg').value.trim();
+  const fare=parseFloat(document.getElementById('totalFare').value)||0;
+  document.getElementById('detailsSection').style.display='none';
+  document.getElementById('acceptBtn').style.display='block';
+  if(!raw){
+    document.getElementById('waitingMsg').style.display='block';
+    document.getElementById('calcResults').style.display='none';
+    document.getElementById('parseStatus').innerHTML='';
+    document.getElementById('parsedFlights').innerHTML='';
+    parsedFlightsData=[];return;
+  }
+  parsedFlightsData=smartExtract(raw);
+  renderFlightChips(parsedFlightsData);
+  if(fare===0){document.getElementById('waitingMsg').style.display='block';document.getElementById('calcResults').style.display='none';return;}
+  document.getElementById('waitingMsg').style.display='none';
+  document.getElementById('calcResults').style.display='block';
+  buildOutputs();
+}
+
+function buildOutputs(){
+  const fare=parseFloat(document.getElementById('totalFare').value)||0;
+  const pax=parseInt(document.getElementById('paxCount').value)||1;
+  const trip=document.getElementById('tripType').value;
+  const curr=document.getElementById('currency').value;
+  const nsVal=document.getElementById('nsValue').value;
+  const nsEl=document.getElementById('nsUnit');
+  const nsAr=nsEl.options[nsEl.selectedIndex].dataset.ar;
+  const nsEn=nsEl.options[nsEl.selectedIndex].dataset.en;
+  const paxNames=[];for(let i=0;i<pax;i++){const el=document.getElementById('paxName_'+i);if(el&&el.value.trim())paxNames.push(el.value.trim());}
+  const paxName=paxNames[0]||'';
+  const feePerPax=trip==='domestic'?40.25:50.00;
+  const baseFee=trip==='domestic'?35:50;
+  const airT=fare+(fare*0.04);
+  const mosT=feePerPax*Math.min(pax,4);
+  const grand=airT+mosT;
+  const bH=document.getElementById('bHand').value;
+  const bC=document.getElementById('bCheck').value;
+  const noAr=`الحجز سيصبح غير قابل للتعديل قبل موعد الإقلاع بـ ${nsVal} ${nsAr}.`;
+  const noEn=`Your booking will become non-changeable ${nsVal} ${nsEn} before the departure time.`;
+  const avAr='مع العلم أن السعر والإمكانية غير ثابتين.';
+  const avEn='Knowing that the price and availability are not guaranteed.';
+  let qAr,qEn;
+  if(trip==='domestic'){
+    qAr=`رسوم التعديل لشركة الطيران: ${airT.toFixed(2)} ${curr}.\nرسوم المسافر ${baseFee} ${curr} لكل مسافر وبعد إضافة ضريبة القيمة المضافة ستصبح ${feePerPax.toFixed(2)} ${curr} لكل مسافر.\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${curr}.\n${avAr}\n${noAr}`;
+    qEn=`Airline Amendment fees: ${airT.toFixed(2)} ${curr}.\nAlmosafer fees: ${baseFee} ${curr} per passenger and after adding VAT it will be ${feePerPax.toFixed(2)} ${curr} per passenger.\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
+  }else{
+    const ppAr=pax>1?' لكل مسافر':'';const ppEn=pax>1?' per passenger':'';
+    qAr=`رسوم التعديل لشركة الطيران: ${airT.toFixed(2)} ${curr}.\nرسوم المسافر ${feePerPax.toFixed(2)} ${curr}${ppAr}.\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${curr}.\n${avAr}\n${noAr}`;
+    qEn=`Airline Amendment fees: ${airT.toFixed(2)} ${curr}.\nAlmosafer fees: ${feePerPax.toFixed(2)} ${curr}${ppEn}.\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
+  }
+  document.getElementById('quoteAr').innerText=qAr;
+  document.getElementById('quoteEn').innerText=qEn;
+
+  let log='';
+  parsedFlightsData.forEach(f=>{log+=`${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''} | ${f.fromCode}-${f.toCode} | ${f.dateEn} | ${f.time}${f.arrTime&&f.arrTime!=='??:??'?' - '+f.arrTime:''}\n`;});
+  document.getElementById('internalLog').innerText=`cx asked to amend to\n${log}\nfees: ${airT.toFixed(2)} ${curr}\nmos: ${mosT.toFixed(2)} ${curr}\ntotal: ${grand.toFixed(2)} ${curr}\n\npl sent`;
+
+  let sAr='',sEn='';
+  parsedFlightsData.forEach(f=>{
+    const dA=to12Ar(f.time),aA=f.arrTime&&f.arrTime!=='??:??'?to12Ar(f.arrTime):'';
+    const dE=to12En(f.time),aE=f.arrTime&&f.arrTime!=='??:??'?to12En(f.arrTime):'';
+    sAr+=`من *${f.fromAr} (${f.fromCode})${f.terminal?' صالة '+f.terminal.replace(/^T/i,''):''}* إلى *${f.toAr} (${f.toCode})${f.arrTerminal?' صالة '+f.arrTerminal.replace(/^T/i,''):''}*\nوقت المغادرة: ${dA}${aA?' | وصول: '+aA:''} ┃ *${f.dateAr}*\n*${f.stopover?'رحلة مع توقف':'رحلة مباشرة'}* ┃ (${f.airlineAr}${f.flightNum?' رحلة '+f.airlineCode+f.flightNum:''})\n`;
+    if(f.layoverAr)sAr+=`⏳ *توقف: ${f.layoverAr}*\n`;
+    sAr+='\n';
+    sEn+=`From *${f.fromEn} (${f.fromCode})${f.terminal?' T'+f.terminal.replace(/^T/i,''):''}* to *${f.toEn} (${f.toCode})${f.arrTerminal?' T'+f.arrTerminal.replace(/^T/i,''):''}*\nDeparture: ${dE}${aE?' | Arrival: '+aE:''} ┃ *${f.dateEn}*\n*${f.stopover?'Connecting Flight':'Direct Flight'}* ┃ (${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''})\n`;
+    if(f.layoverEn)sEn+=`⏳ *Layover: ${f.layoverEn}*\n`;
+    sEn+='\n';
+  });
+  const legAr='برجاء العلم بأنه فى حال إتمام تعديل الرحلة على حجزك إلى رحلة أخرى قد يتم حذف جميع الخدمات الإضافية السابقة من جانب خط الطيران مثل ( المقاعد, الحقائب الإضافية,تأخير ذكي, الوجبات,رسوم اصدار بطاقه الصعود , الالغاء المجانى و التامين على الرحله,حماية الأمتعة), وفى حال تم حذفها سوف تحتاج إضافة اى من هذه الخدمات الإضافية مرة اخرى وسوف يتم دفع رسومها المعروضة من جانب خط الطيران إذا متاح إضافتها على الرحلة الجديدة.';
+  const legEn='Please note that if you change your flight reservation to another flight, all additional services previously provided by the airline (such as seats, extra bags, smart delay, meals, boarding pass fees, free cancellation, flight insurance, and baggage protection) may be removed. If they are removed, you will need to add any of these additional services again, and the fees offered by the airline will be paid if they can be added to the new flight.';
+  let paxLineAr='',paxLineEn='';
+  if(pax===1){
+    if(paxNames.length)paxLineAr='اسم المسافر: '+paxNames[0]+'\n';
+    if(paxNames.length)paxLineEn='Passenger Name: '+paxNames[0]+'\n';
+  }else{
+    const namesListAr=paxNames.length?'\n'+paxNames.map((n,i)=>`${i+1}. ${n}`).join('\n'):'';
+    const namesListEn=paxNames.length?'\n'+paxNames.map((n,i)=>`${i+1}. ${n}`).join('\n'):'';
+    paxLineAr=`عدد المسافرين: ${pax} مسافرين${namesListAr}\n`;
+    paxLineEn=`Number of Passengers: ${pax} passengers${namesListEn}\n`;
+  }
+  document.getElementById('confirmAr').innerText=`للتأكيد فقط، هذه هى الرحلة المطلوبة، صحيح؟\n${paxLineAr}\n${sAr}الأمتعة: ${bH} يد / ${bC} مشحون\n\n${legAr}`;
+  document.getElementById('confirmEn').innerText=`Just to confirm — this is the requested flight, correct?\n${paxLineEn}\n${sEn}Baggage: ${bH} Hand / ${bC} Checked\n\n${legEn}`;
+}
+
+function showHiddenDetails(){
+  document.getElementById('detailsSection').style.display='block';
+  document.getElementById('acceptBtn').style.display='none';
+  setTimeout(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}),100);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  AI TRANSLATE — uses Claude API (works inside claude.ai artifact)
+// ══════════════════════════════════════════════════════════════════
+window.aiTranslate=async function(){
+  const raw=document.getElementById('rawSeg').value.trim();
+  if(!raw){document.getElementById('aiStatus').textContent=currentLang==='ar'?'⚠️ الرجاء إدخال نص أولاً':'⚠️ Please enter text first';return;}
+  const btn=document.getElementById('aiParseBtnLabel');
+  const status=document.getElementById('aiStatus');
+  btn.textContent=currentLang==='ar'?'⏳ جاري التحليل...':'⏳ Analysing...';
+  status.innerHTML='<span style="color:var(--muted);">🔄 Connecting to AI...</span>';
+
+  const prompt=`You are an expert flight data extractor. Extract ALL flight legs (including each leg of connecting flights separately).
+Return ONLY a raw JSON array — no markdown, no explanation. Start with [ end with ].
+Each object must have EXACTLY these keys:
+{"fromCode":"RUH","toCode":"HYD","fromAr":"الرياض","fromEn":"Riyadh","toAr":"حيدراباد","toEn":"Hyderabad","time":"17:10","arrTime":"00:40","day":"02","mon":"MAY","year":"2026","dateAr":"2 مايو 2026","dateEn":"02 MAY 2026","airlineCode":"6E","flightNum":"94","airlineAr":"إنديغو","airlineEn":"IndiGo","terminal":"T5","arrTerminal":"","stopover":false,"layoverAr":"","layoverEn":""}
+Rules: time/arrTime in 24h HH:MM. stopover=true for legs that are layovers. layoverAr/layoverEn = duration string or "". year=2026 if not stated.
+Flight text:\n${raw}`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok){const t=await res.text();throw new Error(`HTTP ${res.status}: ${t.substring(0,200)}`);}
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message||'API error');
+    const text=(data.content||[]).map(c=>c.type==='text'?c.text:'').join('').trim();
+    const match=text.match(/\[[\s\S]*\]/);
+    if(!match)throw new Error('No JSON found. Response: '+text.substring(0,300));
+    const flights=JSON.parse(match[0]);
+    if(!Array.isArray(flights)||!flights.length)throw new Error('Empty result');
+    parsedFlightsData=flights;
+    renderFlightChips(flights);
+    status.innerHTML=`<span style="color:var(--success);">✅ ${currentLang==='ar'?`تم استخراج ${flights.length} رحلة بالذكاء الاصطناعي`:`${flights.length} leg(s) extracted by AI`}</span>`;
+    const fare=parseFloat(document.getElementById('totalFare').value)||0;
+    if(fare>0){document.getElementById('waitingMsg').style.display='none';document.getElementById('calcResults').style.display='block';buildOutputs();}
+    else{document.getElementById('waitingMsg').style.display='block';document.getElementById('calcResults').style.display='none';}
+  }catch(e){
+    console.error('AI error:',e);
+    status.innerHTML=`<span style="color:var(--danger);">❌ ${e.message||'Failed'}</span>`;
+  }
+  btn.textContent=currentLang==='ar'?'تحليل وترجمة بالذكاء الاصطناعي':'AI Translate & Analyse';
+};
+
+function copyText(id,btn){
+  navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>{
+    if(btn){const o=btn.textContent;btn.textContent=currentLang==='ar'?'✅ تم النسخ!':'✅ Copied!';btn.style.background='var(--success)';setTimeout(()=>{btn.textContent=o;btn.style.background='';},2000);}
+  });
+}
+
+window.resetAll=function(){
+  ['rawSeg','totalFare'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('paxCount').value='1';
+  renderPaxNameFields();
+  document.getElementById('nsValue').value='90';
+  document.getElementById('nsUnit').selectedIndex=0;
+  const b=document.getElementById('nsBadge');if(b){b.textContent='—';b.style.background='#94a3b8';}
+  const tb=document.getElementById('tripBadge');if(tb){tb.textContent='—';tb.style.background='#94a3b8';}
+  document.getElementById('currency').selectedIndex=0;
+  document.getElementById('tripType').selectedIndex=0;
+  document.getElementById('bHand').value='7KG';
+  document.getElementById('bCheck').value='20KG';
+  parsedFlightsData=[];editingIndex=-1;
+  ['parseStatus','parsedFlights','aiStatus'].forEach(id=>document.getElementById(id).innerHTML='');
+  document.getElementById('calcResults').style.display='none';
+  document.getElementById('waitingMsg').style.display='block';
+  document.getElementById('detailsSection').style.display='none';
+  document.getElementById('acceptBtn').style.display='block';
+  ['quoteAr','quoteEn','internalLog','confirmAr','confirmEn'].forEach(id=>document.getElementById(id).innerText='');
+};
+
+window.setLang=setLang;window.runAll=runAll;window.showHiddenDetails=showHiddenDetails;
+window.copyText=copyText;window.startEdit=startEdit;window.cancelEdit=cancelEdit;window.saveEdit=saveEdit;
+renderPaxNameFields();
+</script>
+<div style="text-align:center;padding:24px 0 12px;color:var(--muted);font-size:.72rem;letter-spacing:.4px;font-weight:600;">
+  powered by <span style="color:var(--primary);font-weight:800;">Mohamed Rezk</span>
+</div>
+
+</body>
+</html>
