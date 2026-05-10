@@ -144,64 +144,204 @@ hr{border:0;border-top:1px solid var(--border);margin:24px 0;}
 
     <div class="card">
       <div class="card-header"><span>💰</span><h3 id="lbl-fees">2. الرسوم والحسابات</h3></div>
-      <label id="lbl-fare">إجمالي الرسوم على موقع شركة الطيران</label>
-      <input type="number" id="totalFare" placeholder="0.00" oninput="runAll()">
-      <div class="grid-2" style="margin-top:8px;">
-        <div>
-          <label id="lbl-noshow" style="display:flex;align-items:center;gap:6px;"><span id="lbl-noshow-text">وقت النو شو</span>
-            <span id="nsBadge" style="font-size:.67rem;padding:2px 9px;border-radius:12px;background:#94a3b8;color:white;font-weight:700;letter-spacing:.2px;transition:.3s;">—</span>
-          </label>
-          <input type="number" id="nsValue" value="90" oninput="runAll()">
-        </div>
-        <div><label id="lbl-nsunit">الوحدة</label>
-          <select id="nsUnit" onchange="runAll()">
-            <option value="min" data-ar="دقيقة" data-en="minutes">دقيقة / Minutes</option>
-            <option value="hr" data-ar="ساعة" data-en="hours">ساعة / Hours</option>
-          </select>
-        </div>
-      </div>
-      <div class="grid-3" style="margin-top:8px;">
-        <div><label id="lbl-pax">مسافرين</label><input type="number" id="paxCount" value="1" min="1" oninput="runAll()"></div>
-        <div><label id="lbl-curr">العملة</label>
-          <select id="currency" onchange="runAll()">
-            <option value="SAR">SAR</option><option value="AED">AED</option>
-            <option value="KWD">KWD</option><option value="EGP">EGP</option>
-            <option value="USD">USD</option><option value="INR">INR</option>
-          </select>
-        </div>
-        <div><label id="lbl-trip" style="display:flex;align-items:center;gap:6px;"><span id="lbl-trip-text">نوع الرحلة</span>
-            <span id="tripBadge" style="font-size:.67rem;padding:2px 9px;border-radius:12px;background:#94a3b8;color:white;font-weight:700;letter-spacing:.2px;transition:.3s;">—</span>
-          </label>
-          <select id="tripType" onchange="runAll()">
-            <option value="domestic">داخلية (40.25)</option>
-            <option value="international">دولية (50.00)</option>
-          </select>
+
+      <!-- ══ FARE INPUT ══ -->
+      <label id="lbl-fare" style="color:var(--primary);font-size:.73rem;">إجمالي رسوم الطيران</label>
+      <input type="number" id="totalFare" placeholder="0.00" oninput="runAll()" style="margin-bottom:12px;">
+
+      <!-- ══ SETTINGS TRIGGER BUTTON ══ -->
+      <button onclick="openFeesPanel()" style="width:100%;background:linear-gradient(135deg,#003580,#1a4a9c);color:white;border:none;border-radius:12px;padding:13px 16px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:800;font-size:.92rem;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:.2s;box-shadow:0 4px 14px rgba(0,53,128,.2);" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+        <span style="display:flex;align-items:center;gap:8px;">⚙️ <span>إعدادات الرحلة والمسافرين</span></span>
+        <span id="feesSummaryBadge" style="background:rgba(255,255,255,.15);padding:3px 12px;border-radius:20px;font-size:.75rem;font-weight:700;">تأكيد وحساب الرسوم ✅</span>
+      </button>
+
+      <!-- ══ LIVE SUMMARY STRIP ══ -->
+      <div id="liveStrip" style="margin-top:10px;display:none;background:#f0f4f9;border-radius:10px;padding:10px 14px;border:1px solid var(--border);">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;font-size:.78rem;font-weight:700;color:var(--text-mid);">
+          <span>👥 <span id="stripPax">—</span></span>
+          <span>✈️ <span id="stripTrip">—</span></span>
+          <span>⚠️ <span id="stripPenalty">بدون غرامة</span></span>
+          <span style="color:var(--primary);font-weight:900;">💰 <span id="stripTotal">—</span></span>
         </div>
       </div>
-      <div id="paxNamesWrap" style="margin-top:10px;"></div>
     </div>
   </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       FEES POP-OUT PANEL
+  ══════════════════════════════════════════════════════ -->
+  <div id="feesOverlay" onclick="if(event.target===this)closeFeesPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);">
+    <div style="background:white;border-radius:24px 24px 0 0;width:100%;max-width:520px;padding:0;overflow:hidden;box-shadow:0 -8px 40px rgba(0,0,0,.25);animation:slideUp .3s ease;">
+
+      <!-- HEADER -->
+      <div style="background:linear-gradient(135deg,#003580,#1a4a9c);padding:18px 20px 16px;position:relative;">
+        <button onclick="closeFeesPanel()" style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,.15);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;font-weight:900;">✕</button>
+        <div style="color:rgba(255,255,255,.7);font-size:.72rem;font-weight:700;margin-bottom:3px;">⚙️ إعدادات الرحلة والمسافرين</div>
+        <div style="color:white;font-size:1rem;font-weight:900;">راجع البيانات المُعبّأة تلقائياً قبل المتابعة</div>
+      </div>
+
+      <div style="padding:20px;max-height:75vh;overflow-y:auto;">
+
+        <!-- DISCOVERED FLIGHT INFO (auto-filled) -->
+        <div id="panelFlightInfo" style="background:linear-gradient(135deg,#eff6ff,#f0f9ff);border:1px solid #bfdbfe;border-radius:14px;padding:12px 14px;margin-bottom:16px;display:none;">
+          <div style="font-size:.68rem;font-weight:800;color:#1d4ed8;margin-bottom:6px;text-align:left;">بيانات الرحلة المكتشفة</div>
+          <div id="panelFlightInfoContent" style="font-size:.82rem;font-weight:800;color:#1e3a8a;"></div>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;" id="panelFlightTags"></div>
+        </div>
+
+        <!-- NO-SHOW TIME -->
+        <div style="background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+          <div style="font-size:.68rem;font-weight:800;color:var(--muted);margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:6px;">وقت النو شو <span id="nsBadge" style="font-size:.67rem;padding:2px 9px;border-radius:12px;background:#94a3b8;color:white;font-weight:700;transition:.3s;">—</span></div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="position:relative;flex:1;">
+              <input type="number" id="nsValue" value="90" oninput="runAll()" style="width:100%;font-size:1.1rem;font-weight:900;text-align:center;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:white;">
+            </div>
+            <select id="nsUnit" onchange="runAll()" style="flex:1;padding:11px 8px;border:1.5px solid var(--border);border-radius:10px;font-family:'Cairo',sans-serif;font-size:.88rem;background:white;">
+              <option value="min" data-ar="دقيقة" data-en="minutes">دقيقة / Min</option>
+              <option value="hr" data-ar="ساعة" data-en="hours">ساعة / Hr</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PAX COUNTERS ADT / CHD / INF -->
+        <div style="background:#f8fafc;border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
+          <div style="font-size:.68rem;font-weight:800;color:var(--muted);margin-bottom:12px;text-align:left;">عدد المسافرين</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+
+            <!-- ADT -->
+            <div style="text-align:center;">
+              <div style="font-size:.7rem;font-weight:800;color:var(--text-mid);margin-bottom:2px;">بالغ</div>
+              <div style="font-size:.62rem;color:var(--muted);margin-bottom:8px;">ADT</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:0;background:white;border:1.5px solid #003580;border-radius:50px;overflow:hidden;">
+                <button onclick="changePaxType('adt',1)" style="width:36px;height:36px;border:none;background:transparent;font-size:1.2rem;cursor:pointer;color:#003580;font-weight:900;">+</button>
+                <span id="adtDisplay" style="font-size:1.1rem;font-weight:900;color:#003580;min-width:20px;text-align:center;">1</span>
+                <button onclick="changePaxType('adt',-1)" style="width:36px;height:36px;border:none;background:transparent;font-size:1.2rem;cursor:pointer;color:#003580;font-weight:900;">−</button>
+              </div>
+            </div>
+
+            <!-- CHD -->
+            <div style="text-align:center;">
+              <div style="font-size:.7rem;font-weight:800;color:var(--text-mid);margin-bottom:2px;">طفل</div>
+              <div style="font-size:.62rem;color:var(--muted);margin-bottom:8px;">CHD</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:0;background:white;border:1.5px solid #003580;border-radius:50px;overflow:hidden;">
+                <button onclick="changePaxType('chd',1)" style="width:36px;height:36px;border:none;background:transparent;font-size:1.2rem;cursor:pointer;color:#003580;font-weight:900;">+</button>
+                <span id="chdDisplay" style="font-size:1.1rem;font-weight:900;color:#003580;min-width:20px;text-align:center;">0</span>
+                <button onclick="changePaxType('chd',-1)" style="width:36px;height:36px;border:none;background:transparent;font-size:1.2rem;cursor:pointer;color:#003580;font-weight:900;">−</button>
+              </div>
+            </div>
+
+            <!-- INF -->
+            <div style="text-align:center;">
+              <div style="font-size:.7rem;font-weight:800;color:var(--text-mid);margin-bottom:2px;">رضيع</div>
+              <div style="font-size:.62rem;color:var(--muted);margin-bottom:8px;">INF</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:0;background:white;border:1.5px solid #003580;border-radius:50px;overflow:hidden;">
+                <button onclick="changePaxType('inf',1)" style="width:36px;height:36px;border:none;background:transparent;font-size:1.2rem;cursor:pointer;color:#003580;font-weight:900;">+</button>
+                <span id="infDisplay" style="font-size:1.1rem;font-weight:900;color:#003580;min-width:20px;text-align:center;">0</span>
+                <button onclick="changePaxType('inf',-1)" style="width:36px;height:36px;border:none;background:transparent;font-size:1.2rem;cursor:pointer;color:#003580;font-weight:900;">−</button>
+              </div>
+            </div>
+
+          </div>
+          <input type="hidden" id="paxCount" value="1">
+          <input type="hidden" id="adtCount" value="1">
+          <input type="hidden" id="chdCount" value="0">
+          <input type="hidden" id="infCount" value="0">
+        </div>
+
+        <!-- TRIP TYPE TOGGLE -->
+        <div style="background:#f8fafc;border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
+          <div style="font-size:.68rem;font-weight:800;color:var(--muted);margin-bottom:10px;text-align:left;display:flex;align-items:center;justify-content:space-between;">
+            <span>نوع الرحلة (<span id="currency-label">SAR</span>) <span id="tripBadge" style="font-size:.67rem;padding:2px 9px;border-radius:12px;background:#94a3b8;color:white;font-weight:700;transition:.3s;">—</span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <button id="btnIntl" onclick="setTripType('international')" style="padding:14px 10px;border-radius:12px;border:2px solid #003580;background:#003580;color:white;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:800;font-size:.88rem;transition:.2s;">
+              🌍 دولية<br><span style="font-size:.75rem;opacity:.85;">SAR 50.00</span>
+            </button>
+            <button id="btnDom" onclick="setTripType('domestic')" style="padding:14px 10px;border-radius:12px;border:2px solid var(--border);background:white;color:var(--text-mid);cursor:pointer;font-family:'Cairo',sans-serif;font-weight:800;font-size:.88rem;transition:.2s;">
+              🏠 داخلية<br><span style="font-size:.75rem;">SAR 40.25</span>
+            </button>
+          </div>
+          <input type="hidden" id="tripType" value="international">
+        </div>
+
+        <!-- PENALTY (per pax) -->
+        <div style="background:linear-gradient(135deg,#fff7ed,#fffbeb);border:1.5px solid #fed7aa;border-radius:14px;padding:14px;margin-bottom:16px;">
+          <div style="font-size:.68rem;font-weight:800;color:#c2410c;margin-bottom:8px;text-align:left;">⚠️ غرامة التعديل — لمسافر واحد فقط</div>
+          <input type="number" id="penaltyAmount" placeholder="0.00" oninput="calcFareDiff()" style="border-color:#fed7aa;background:#fff;font-size:1rem;font-weight:700;">
+          <div id="penaltyTotalRow" style="display:none;margin-top:8px;background:white;border-radius:8px;padding:8px 12px;border:1px solid #fed7aa;font-size:.78rem;font-weight:700;color:#92400e;display:flex;justify-content:space-between;">
+            <span>إجمالي الغرامة (× <span id="penaltyPaxCount">1</span> مسافرين)</span>
+            <span id="penaltyTotalVal" style="color:var(--danger);">—</span>
+          </div>
+          <!-- fare diff display -->
+          <div id="fareDiffRow" style="display:none;margin-top:6px;background:white;border-radius:8px;padding:8px 12px;border:1px solid #fed7aa;">
+            <div style="display:flex;justify-content:space-between;font-size:.77rem;font-weight:700;color:#92400e;margin-bottom:3px;">
+              <span>فرق السعر الإجمالي</span><span id="fareDiffValue">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.77rem;font-weight:700;color:#c2410c;border-top:1px dashed #fed7aa;padding-top:4px;">
+              <span>فرق السعر / مسافر</span><span id="fareDiffPerPax">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CURRENCY -->
+        <div style="margin-bottom:20px;">
+          <label style="font-size:.68rem;font-weight:800;color:var(--muted);margin-bottom:6px;display:block;text-transform:uppercase;">العملة</label>
+          <select id="currency" onchange="runAll();updateCurrencyLabel()" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'Cairo',sans-serif;font-size:.88rem;background:white;">
+            <option value="SAR">🇸🇦 SAR — ريال سعودي</option>
+            <option value="AED">🇦🇪 AED — درهم إماراتي</option>
+            <option value="KWD">🇰🇼 KWD — دينار كويتي</option>
+            <option value="EGP">🇪🇬 EGP — جنيه مصري</option>
+            <option value="USD">🇺🇸 USD — دولار أمريكي</option>
+            <option value="INR">🇮🇳 INR — روبية هندية</option>
+          </select>
+        </div>
+
+        <!-- CONFIRM BUTTON -->
+        <button onclick="confirmFeesPanel()" style="width:100%;background:linear-gradient(135deg,#003580,#1a4a9c);color:white;border:none;border-bottom:3px solid #002060;border-radius:14px;padding:16px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:900;font-size:1rem;transition:.2s;letter-spacing:.2px;" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+          ✅ تأكيد وحساب الرسوم
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <style>
+  @keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+  #feesOverlay{display:flex!important;}
+  #feesOverlay.hidden{display:none!important;}
+  </style>
 
   <div class="content">
     <div class="card">
       <div id="waitingMsg" class="waiting"><div class="w-icon">⏳</div><span id="lbl-waiting">يرجى إدخال تفاصيل الرحلة وسعر البوابة...</span></div>
       <div id="calcResults" style="display:none;">
         <div class="section-badge" id="lbl-quote-badge">عرض السعر للعميل</div>
+        <!-- بكس واحد يحتوي AR + EN -->
         <div id="quoteAr" class="msg-box" data-lang="العرض العربي"></div>
-        <div id="quoteEn" class="msg-box" data-lang="English Quote" dir="ltr"></div>
         <button class="btn btn-success" onclick="copyText('quoteAr',this)" style="margin-bottom:4px;" data-ar="نسخ العرض العربي ✂️" data-en="Copy Arabic Quote ✂️">نسخ العرض العربي ✂️</button>
+        <div id="quoteEn" class="msg-box" data-lang="English Quote" dir="ltr" style="margin-top:12px;"></div>
         <button class="btn btn-main" onclick="copyText('quoteEn',this)" style="margin-bottom:16px;" data-ar="نسخ العرض الإنجليزي ✂️" data-en="Copy English Quote ✂️">Copy English Quote ✂️</button>
         <button id="acceptBtn" class="btn btn-accept" onclick="showHiddenDetails()">✅ <span id="lbl-client-accept">العميل وافق — عرض التفاصيل الكاملة</span></button>
         <div id="detailsSection" class="hidden-section">
-          <div class="section-badge">Internal Log</div>
-          <div id="internalLog" class="msg-box internal-box" dir="ltr" data-lang="Internal Record"></div>
-          <button class="btn btn-dark" onclick="copyText('internalLog',this)" style="margin-bottom:20px;" data-ar="📋 نسخ السجل الداخلي" data-en="📋 Copy Internal Log">📋 Copy Internal Log</button>
+          <!-- حقل أسماء المسافرين — يظهر فقط بعد موافقة العميل -->
+          <div id="paxNamesWrap" style="margin-bottom:16px;background:#f8fafc;border:1.5px solid var(--secondary);border-radius:12px;padding:14px;">
+            <label style="font-size:.72rem;font-weight:800;color:var(--primary);margin-bottom:6px;display:block;">👤 أسماء المسافرين <span style="font-size:.65rem;background:#e0f2fe;color:#0369a1;padding:1px 8px;border-radius:10px;font-weight:700;">اختياري</span></label>
+            <textarea id="paxNamesText" rows="3" oninput="buildOutputs()" placeholder="أدخل أسماء المسافرين هنا (كل اسم في سطر أو مفصولة بفاصلة)&#10;مثال: Ahmed Mohamed, Sara Ali" style="height:80px;font-family:'Cairo',sans-serif;font-size:.85rem;border-color:var(--border);background:white;resize:vertical;"></textarea>
+          </div>
+          <!-- بكس واحد يجمع Internal Log + Confirm AR + Confirm EN -->
+          <div class="section-badge">Internal FFT</div>
+          <div id="internalLog" class="msg-box internal-box" dir="ltr" data-lang="Internal FFT"></div>
+          <button class="btn btn-dark" onclick="copyText('internalLog',this)" style="margin-bottom:20px;" data-ar="📋 نسخ السجل الداخلي" data-en="📋 Copy Internal FFT">📋 Copy Internal FFT</button>
           <hr>
           <div class="section-badge" id="lbl-confirm-badge">التأكيد النهائي للعميل</div>
-          <div id="confirmAr" class="msg-box" data-lang="تأكيد العميل (عربي)"></div>
-          <button class="btn btn-success" onclick="copyText('confirmAr',this)" data-ar="نسخ التأكيد العربي ✂️" data-en="Copy Arabic Confirmation ✂️">نسخ التأكيد العربي ✂️</button>
-          <div id="confirmEn" class="msg-box" data-lang="Customer Confirmation (EN)" dir="ltr" style="margin-top:16px;"></div>
-          <button class="btn btn-main" onclick="copyText('confirmEn',this)" data-ar="نسخ التأكيد الإنجليزي ✂️" data-en="Copy English Confirmation ✂️">Copy English Confirmation ✂️</button>
+          <!-- بكس واحد مدمج للتأكيد -->
+          <div id="confirmCombined" class="msg-box" data-lang="تأكيد العميل"></div>
+          <button class="btn btn-success" onclick="copyText('confirmCombined',this)" style="margin-bottom:4px;" data-ar="نسخ التأكيد العربي ✂️" data-en="Copy Arabic Confirmation ✂️">نسخ التأكيد العربي ✂️</button>
+          <div id="confirmCombinedEn" class="msg-box" data-lang="Customer Confirmation (EN)" dir="ltr" style="margin-top:12px;"></div>
+          <button class="btn btn-main" onclick="copyText('confirmCombinedEn',this)" data-ar="نسخ التأكيد الإنجليزي ✂️" data-en="Copy English Confirmation ✂️">Copy English Confirmation ✂️</button>
+          <!-- hidden elements kept for backward compat -->
+          <div id="confirmAr" style="display:none;"></div>
+          <div id="confirmEn" style="display:none;"></div>
         </div>
       </div>
     </div>
@@ -349,17 +489,16 @@ const saudiAirports=new Set([
 
 function autoDetectTripType(flights){
   if(!flights||!flights.length)return;
-  const tripEl=document.getElementById('tripType');
-  const tripBadgeEl=document.getElementById('tripBadge');
-  // Domestic = ALL origin & destination airports are Saudi
   const allSaudi=flights.every(f=>saudiAirports.has(f.fromCode)&&saudiAirports.has(f.toCode));
   const hasUnknown=flights.some(f=>f.fromCode==='??'||f.toCode==='??');
-  if(hasUnknown)return; // can't determine, leave as-is
-  tripEl.value=allSaudi?'domestic':'international';
-  if(tripBadgeEl){
-    tripBadgeEl.textContent=allSaudi?'✅ داخلية':'✅ دولية';
-    tripBadgeEl.style.background=allSaudi?'#16a34a':'#003580';
-  }
+  if(hasUnknown)return;
+  // اختيار العملة تلقائياً: SAR للرحلات الداخلية
+  if(allSaudi){const currEl=document.getElementById('currency');currEl.value='SAR';updateCurrencyLabel();}
+  // استدعاء setTripType لتلوين الأزرار بشكل صحيح
+  setTripType(allSaudi?'domestic':'international');
+  // تحديث badge بعلامة ✅
+  const tripBadgeEl=document.getElementById('tripBadge');
+  if(tripBadgeEl){tripBadgeEl.textContent=allSaudi?'✅ داخلية':'✅ دولية';tripBadgeEl.style.background=allSaudi?'#16a34a':'#003580';}
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -480,7 +619,7 @@ function setLang(lang){
 
   // Internal Log section badge (no id)
   const ilBadge=document.querySelector('#detailsSection .section-badge');
-  if(ilBadge)ilBadge.textContent=lang==='ar'?'السجل الداخلي':'Internal Log';
+  if(ilBadge)ilBadge.textContent=lang==='ar'?'Internal FFT':'Internal FFT';
 
   buildFormatHelper();runAll();
 }
@@ -744,32 +883,137 @@ function to12Ar(t){if(!t||t==='??:??')return t;const[h,m]=t.split(':');let hr=pa
 //  PAX NAME FIELDS — dynamic per passenger count
 // ══════════════════════════════════════════════════════════════════
 function renderPaxNameFields(){
-  const pax=parseInt(document.getElementById('paxCount').value)||1;
-  const wrap=document.getElementById('paxNamesWrap');
-  // Preserve existing values before re-render
-  const existing=[];
-  wrap.querySelectorAll('input[id^="paxName_"]').forEach(el=>existing.push(el.value));
-  wrap.innerHTML='';
-  const headerLabel=document.createElement('label');
-  headerLabel.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;';
-  const labelSpan=document.createElement('span');
-  labelSpan.id='lbl-paxname-text';
-  labelSpan.textContent=currentLang==='ar'?(pax===1?'اسم المسافر':'أسماء المسافرين'):(pax===1?'Passenger Name':'Passenger Names');
-  const optBadge=document.createElement('span');
-  optBadge.id='opt-badge';
-  optBadge.style.cssText='font-size:.65rem;background:#e0f2fe;color:#0369a1;padding:1px 8px;border-radius:10px;font-weight:700;';
-  optBadge.textContent=currentLang==='ar'?'اختياري':'Optional';
-  headerLabel.appendChild(labelSpan);headerLabel.appendChild(optBadge);
-  wrap.appendChild(headerLabel);
-  for(let i=0;i<pax;i++){
-    const inp=document.createElement('input');
-    inp.type='text';inp.id='paxName_'+i;
-    inp.placeholder=pax===1?(currentLang==='ar'?'مثال: Ahmed Mohamed':'e.g. Ahmed Mohamed'):(currentLang==='ar'?`مسافر ${i+1}`:`Passenger ${i+1}`);
-    inp.style.cssText='background:#fff;margin-bottom:'+(i<pax-1?'6px':'0')+';';
-    inp.value=existing[i]||'';
-    inp.oninput=()=>buildOutputs();
-    wrap.appendChild(inp);
+  // الأسماء انتقلت لحقل موحد خارج البانل — لا شيء هنا
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  FEES PANEL
+// ══════════════════════════════════════════════════════════════════
+let paxCounts={adt:1,chd:0,inf:0};
+
+function openFeesPanel(){
+  document.getElementById('feesOverlay').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+  updatePanelFlightInfo();
+}
+function closeFeesPanel(){
+  document.getElementById('feesOverlay').classList.add('hidden');
+  document.body.style.overflow='';
+}
+function confirmFeesPanel(){
+  closeFeesPanel();
+  buildOutputs();
+  updateLiveStrip();
+}
+
+function updateCurrencyLabel(){
+  const v=document.getElementById('currency').value;
+  const el=document.getElementById('currency-label');
+  if(el)el.textContent=v;
+}
+
+function setTripType(type){
+  document.getElementById('tripType').value=type;
+  const bi=document.getElementById('btnIntl');
+  const bd=document.getElementById('btnDom');
+  if(type==='international'){
+    bi.style.cssText=bi.style.cssText.replace(/background:[^;]+/,'background:#003580').replace(/color:[^;]+/,'color:white').replace(/border:[^;]+/,'border:2px solid #003580');
+    bi.style.background='#003580';bi.style.color='white';bi.style.border='2px solid #003580';
+    bd.style.background='white';bd.style.color='var(--text-mid)';bd.style.border='2px solid var(--border)';
+  }else{
+    bd.style.background='#003580';bd.style.color='white';bd.style.border='2px solid #003580';
+    bi.style.background='white';bi.style.color='var(--text-mid)';bi.style.border='2px solid var(--border)';
   }
+  // update badge
+  const tb=document.getElementById('tripBadge');
+  if(tb){tb.textContent=type==='domestic'?'داخلية':'دولية';tb.style.background=type==='domestic'?'#0369a1':'#7c3aed';}
+  calcFareDiff();
+}
+
+function changePaxType(type,delta){
+  let v=paxCounts[type]+delta;
+  if(type==='adt') v=Math.max(1,Math.min(9,v));
+  else v=Math.max(0,Math.min(9,v));
+  paxCounts[type]=v;
+  document.getElementById(type+'Display').textContent=v;
+  const total=paxCounts.adt+paxCounts.chd+paxCounts.inf;
+  document.getElementById('paxCount').value=total;
+  document.getElementById('adtCount').value=paxCounts.adt;
+  document.getElementById('chdCount').value=paxCounts.chd;
+  document.getElementById('infCount').value=paxCounts.inf;
+  const ppEl=document.getElementById('penaltyPaxCount');
+  if(ppEl)ppEl.textContent=total;
+  renderPaxNameFields();
+  calcFareDiff();
+}
+
+// legacy changePax kept for reset compatibility
+function changePax(delta){changePaxType('adt',delta);}
+
+function updatePanelFlightInfo(){
+  const infoBox=document.getElementById('panelFlightInfo');
+  const infoContent=document.getElementById('panelFlightInfoContent');
+  const infoTags=document.getElementById('panelFlightTags');
+  if(!parsedFlightsData||!parsedFlightsData.length){infoBox.style.display='none';return;}
+  const f=parsedFlightsData[0];
+  infoContent.textContent=`${f.airlineAr||f.airlineEn} — ${f.fromAr||f.fromCode} ← ${f.toAr||f.toCode}`;
+  infoTags.innerHTML='';
+  const tags=[];
+  if(f.airlineCode)tags.push({text:f.airlineCode+(f.flightNum?' '+f.flightNum:''),bg:'#dbeafe',color:'#1d4ed8'});
+  const auto=autoDetectedTrip;
+  if(auto)tags.push({text:auto==='domestic'?'داخلية 🏠':'دولية 🌍',bg:auto==='domestic'?'#fef9c3':'#ede9fe',color:auto==='domestic'?'#854d0e':'#6d28d9'});
+  tags.forEach(t=>{const s=document.createElement('span');s.textContent=t.text;s.style.cssText=`background:${t.bg};color:${t.color};border-radius:6px;padding:3px 9px;font-size:.72rem;font-weight:700;`;infoTags.appendChild(s);});
+  infoBox.style.display='block';
+}
+
+function updateLiveStrip(){
+  const strip=document.getElementById('liveStrip');
+  const fare=parseFloat(document.getElementById('totalFare').value)||0;
+  if(!fare){strip.style.display='none';return;}
+  strip.style.display='block';
+  const total=paxCounts.adt+paxCounts.chd+paxCounts.inf;
+  const trip=document.getElementById('tripType').value;
+  const curr=document.getElementById('currency').value;
+  const penalty=parseFloat(document.getElementById('penaltyAmount').value)||0;
+  const feePerPax=trip==='domestic'?40.25:50;
+  const airT=fare*1.04;
+  const mosT=feePerPax*Math.min(total,4);
+  const grand=airT+mosT;
+  document.getElementById('stripPax').textContent=`${total} مسافر (${paxCounts.adt} بالغ${paxCounts.chd?' + '+paxCounts.chd+' طفل':''}${paxCounts.inf?' + '+paxCounts.inf+' رضيع':''})`;
+  document.getElementById('stripTrip').textContent=trip==='domestic'?'داخلية':'دولية';
+  document.getElementById('stripPenalty').textContent=penalty>0?`غرامة ${(penalty*total).toFixed(2)} ${curr}`:'بدون غرامة';
+  document.getElementById('stripTotal').textContent=`${grand.toFixed(2)} ${curr}`;
+}
+
+function calcFareDiff(){
+  const curr=document.getElementById('currency').value||'SAR';
+  const total=paxCounts.adt+paxCounts.chd+paxCounts.inf;
+  const fare=parseFloat(document.getElementById('totalFare').value)||0;
+  const penaltyPerPax=parseFloat(document.getElementById('penaltyAmount').value)||0;
+  const penaltyTotal=penaltyPerPax*total;
+  const el=document.getElementById('fareDiffValue');
+  const elPP=document.getElementById('fareDiffPerPax');
+  const ptRow=document.getElementById('penaltyTotalRow');
+  const fdRow=document.getElementById('fareDiffRow');
+  const ptVal=document.getElementById('penaltyTotalVal');
+  if(penaltyPerPax>0&&ptRow){
+    ptRow.style.display='flex';
+    if(ptVal)ptVal.textContent=`${penaltyTotal.toFixed(2)} ${curr}`;
+  } else if(ptRow){ptRow.style.display='none';}
+  if(fare===0&&penaltyPerPax===0){
+    if(el)el.textContent='—';
+    if(elPP)elPP.textContent='—';
+    if(fdRow)fdRow.style.display='none';
+    buildOutputs();return;
+  }
+  if(penaltyPerPax>0&&fare>0){
+    const diff=fare-penaltyTotal;
+    const perPax=diff/total;
+    if(el)el.textContent=diff.toFixed(2)+' '+curr;
+    if(elPP)elPP.textContent=perPax.toFixed(2)+' '+curr;
+    if(fdRow)fdRow.style.display='block';
+  } else if(fdRow){fdRow.style.display='none';}
+  buildOutputs();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -796,6 +1040,13 @@ function runAll(){
   buildOutputs();
 }
 
+// ── Arabic currency name map ──
+const currArMap={
+  'SAR':'ريال سعودي','AED':'درهم إماراتي','KWD':'دينار كويتي',
+  'EGP':'جنيه مصري','USD':'دولار أمريكي','INR':'روبية هندية'
+};
+function currAr(c){return currArMap[c]||c;}
+
 function buildOutputs(){
   const fare=parseFloat(document.getElementById('totalFare').value)||0;
   const pax=parseInt(document.getElementById('paxCount').value)||1;
@@ -805,34 +1056,98 @@ function buildOutputs(){
   const nsEl=document.getElementById('nsUnit');
   const nsAr=nsEl.options[nsEl.selectedIndex].dataset.ar;
   const nsEn=nsEl.options[nsEl.selectedIndex].dataset.en;
-  const paxNames=[];for(let i=0;i<pax;i++){const el=document.getElementById('paxName_'+i);if(el&&el.value.trim())paxNames.push(el.value.trim());}
-  const paxName=paxNames[0]||'';
+  // قراءة أسماء المسافرين من الحقل الموحد
+  const paxNamesRaw=document.getElementById('paxNamesText')?document.getElementById('paxNamesText').value.trim():'';
+  const paxNames=paxNamesRaw?paxNamesRaw.split(/[\n,،]+/).map(s=>s.trim()).filter(Boolean):[];
   const feePerPax=trip==='domestic'?40.25:50.00;
   const baseFee=trip==='domestic'?35:50;
-  const airT=fare+(fare*0.04);
-  const mosT=feePerPax*Math.min(pax,4);
-  const grand=airT+mosT;
   const bH=document.getElementById('bHand').value;
   const bC=document.getElementById('bCheck').value;
+
+  // ── Airline fee breakdown ──
+  const penaltyPerPax=parseFloat(document.getElementById('penaltyAmount').value)||0;
+  const penaltyAmt=penaltyPerPax*pax; // total penalty = per-pax × pax count
+  const fareDiff=penaltyPerPax>0?(fare-penaltyAmt):null;
+  const fareDiffPerPax=fareDiff!==null?fareDiff/pax:null;
+
+  // Update live diff display (in panel)
+  const diffEl=document.getElementById('fareDiffValue');
+  const diffPPEl=document.getElementById('fareDiffPerPax');
+  if(fareDiff===null){
+    if(diffEl)diffEl.textContent='—';
+    if(diffPPEl)diffPPEl.textContent='—';
+  }else{
+    if(diffEl)diffEl.textContent=fareDiff.toFixed(2)+' '+curr;
+    if(diffPPEl)diffPPEl.textContent=fareDiffPerPax.toFixed(2)+' '+curr;
+  }
+
+  // ── Core fee calculation ──
+  const airT=fare+(fare*0.04);
+  const amendPerPax=feePerPax; // already includes VAT
+
   const noAr=`الحجز سيصبح غير قابل للتعديل قبل موعد الإقلاع بـ ${nsVal} ${nsAr}.`;
   const noEn=`Your booking will become non-changeable ${nsVal} ${nsEn} before the departure time.`;
   const avAr='مع العلم أن السعر والإمكانية غير ثابتين.';
   const avEn='Knowing that the price and availability are not guaranteed.';
+
+  // ── فرق السعر في الرسالة (فقط إذا أُدخلت القيم) ──
+  const cAr=currAr(curr);
+  const penaltyLineAr=penaltyPerPax>0?`غرامة الطيران: ${penaltyPerPax.toFixed(2)} ${cAr} للمسافر (إجمالي: ${penaltyAmt.toFixed(2)} ${cAr}).\n`:'';
+  const fareDiffLineAr=fareDiffPerPax!==null?`فارق السعر للمسافر الواحد: ${fareDiffPerPax.toFixed(2)} ${cAr}.\n`:'';
+  const penaltyLineEn=penaltyPerPax>0?`Airline penalty: ${penaltyPerPax.toFixed(2)} ${curr}/pax (total: ${penaltyAmt.toFixed(2)} ${curr}).\n`:'';
+  const fareDiffLineEn=fareDiffPerPax!==null?`Fare difference per passenger: ${fareDiffPerPax.toFixed(2)} ${curr}.\n`:'';
+
+  // ── إجماليات لكل فئة ──
+  // البالغ  = غرامة + فرق السعر
+  // الطفل   = غرامة + فرق السعر
+  // الرضيع  = غرامة + فرق السعر (بدون رسوم مسافر)
+  const fdpp = fareDiffPerPax !== null ? fareDiffPerPax : 0;
+  const penPP = penaltyPerPax || 0;
+  const adtTotal = penPP + fdpp;
+  const chdTotal = penPP + fdpp;
+  const infTotal = fdpp; // فرق السعر فقط — بدون غرامة ولا رسوم مسافر
+
+  // الحد الأقصى لرسوم المسافر: 4 مسافرين (البالغ + الطفل فقط، الرضيع لا يُحسب)
+  const mosT = feePerPax * Math.min(paxCounts.adt + paxCounts.chd, 4);
+  const grand=airT+mosT;
+
+  // نعرض سطر الإجمالي فقط لو في قيمة
+  const adtLineAr = adtTotal !== 0 ? `إجمالي الرسوم للبالغ: ${adtTotal.toFixed(2)} ${cAr}.\n` : '';
+  const chdLineAr = chdTotal !== 0 ? `إجمالي الرسوم للطفل: ${chdTotal.toFixed(2)} ${cAr}.\n` : '';
+  const infLineAr = infTotal !== 0 ? `إجمالي الرسوم للرضيع: ${infTotal.toFixed(2)} ${cAr}.\n` : '';
+  const adtLineEn = adtTotal !== 0 ? `Total fees per adult: ${adtTotal.toFixed(2)} ${curr}.\n` : '';
+  const chdLineEn = chdTotal !== 0 ? `Total fees per child: ${chdTotal.toFixed(2)} ${curr}.\n` : '';
+  const infLineEn = infTotal !== 0 ? `Total fees for the infant: ${infTotal.toFixed(2)} ${curr}.\n` : '';
+
+  // ── أسماء المسافرين في الـ quote ──
+  let paxNamesQuoteAr='',paxNamesQuoteEn='';
+  if(paxNames.length){
+    if(pax===1){
+      paxNamesQuoteAr=`اسم المسافر: ${paxNames[0]}\n`;
+      paxNamesQuoteEn=`Passenger Name: ${paxNames[0]}\n`;
+    }else{
+      paxNamesQuoteAr=`أسماء المسافرين:\n${paxNames.map((n,i)=>`${i+1}. ${n}`).join('\n')}\n`;
+      paxNamesQuoteEn=`Passenger Names:\n${paxNames.map((n,i)=>`${i+1}. ${n}`).join('\n')}\n`;
+    }
+  }
+
   let qAr,qEn;
   if(trip==='domestic'){
-    qAr=`رسوم التعديل لشركة الطيران: ${airT.toFixed(2)} ${curr}.\nرسوم المسافر ${baseFee} ${curr} لكل مسافر وبعد إضافة ضريبة القيمة المضافة ستصبح ${feePerPax.toFixed(2)} ${curr} لكل مسافر.\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${curr}.\n${avAr}\n${noAr}`;
-    qEn=`Airline Amendment fees: ${airT.toFixed(2)} ${curr}.\nAlmosafer fees: ${baseFee} ${curr} per passenger and after adding VAT it will be ${feePerPax.toFixed(2)} ${curr} per passenger.\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
+    qAr=`${paxNamesQuoteAr}${penaltyLineAr}${fareDiffLineAr}رسوم المسافر ${baseFee} ${cAr} لكل مسافر وبعد إضافة ضريبة القيمة المضافة ستصبح ${feePerPax.toFixed(2)} ${cAr} لكل مسافر.\n${adtLineAr}${chdLineAr}${infLineAr}\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${cAr}.\n${avAr}\n${noAr}`;
+    qEn=`${paxNamesQuoteEn}${penaltyLineEn}${fareDiffLineEn}Almosafer fees: ${baseFee} ${curr} per passenger and after adding VAT it will be ${feePerPax.toFixed(2)} ${curr} per passenger.\n${adtLineEn}${chdLineEn}${infLineEn}\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
   }else{
     const ppAr=pax>1?' لكل مسافر':'';const ppEn=pax>1?' per passenger':'';
-    qAr=`رسوم التعديل لشركة الطيران: ${airT.toFixed(2)} ${curr}.\nرسوم المسافر ${feePerPax.toFixed(2)} ${curr}${ppAr}.\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${curr}.\n${avAr}\n${noAr}`;
-    qEn=`Airline Amendment fees: ${airT.toFixed(2)} ${curr}.\nAlmosafer fees: ${feePerPax.toFixed(2)} ${curr}${ppEn}.\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
+    qAr=`${paxNamesQuoteAr}${penaltyLineAr}${fareDiffLineAr}رسوم المسافر ${feePerPax.toFixed(2)} ${cAr}${ppAr}.\n${adtLineAr}${chdLineAr}${infLineAr}\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${cAr}.\n${avAr}\n${noAr}`;
+    qEn=`${paxNamesQuoteEn}${penaltyLineEn}${fareDiffLineEn}Almosafer fees: ${feePerPax.toFixed(2)} ${curr}${ppEn}.\n${adtLineEn}${chdLineEn}${infLineEn}\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
   }
   document.getElementById('quoteAr').innerText=qAr;
   document.getElementById('quoteEn').innerText=qEn;
 
   let log='';
-  parsedFlightsData.forEach(f=>{log+=`${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''} | ${f.fromCode}-${f.toCode} | ${f.dateEn} | ${f.time}${f.arrTime&&f.arrTime!=='??:??'?' - '+f.arrTime:''}\n`;});
-  document.getElementById('internalLog').innerText=`cx asked to amend to\n${log}\nfees: ${airT.toFixed(2)} ${curr}\nmos: ${mosT.toFixed(2)} ${curr}\ntotal: ${grand.toFixed(2)} ${curr}\n\npl sent`;
+  parsedFlightsData.forEach(f=>{log+=`${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''} | ${f.fromCode}-${f.toCode} | ${f.day} ${f.mon} ${f.year} | ${f.time}${f.arrTime&&f.arrTime!=='??:??'?' - '+f.arrTime:''}\n`;});
+  const tripLabel=trip==='domestic'?'Domestic':'International';
+  const paxLine=`pax: ${pax} (ADT:${paxCounts.adt} CHD:${paxCounts.chd} INF:${paxCounts.inf}) | trip: ${tripLabel}\n`;
+  document.getElementById('internalLog').innerText=`cx asked to amend to\n${log}\n${paxLine}airline fees: ${airT.toFixed(2)} ${curr}\nmos fees:      ${mosT.toFixed(2)} ${curr}\ntotal:         ${grand.toFixed(2)} ${curr}\n\npl sent`;
 
   let sAr='',sEn='';
   parsedFlightsData.forEach(f=>{
@@ -859,6 +1174,11 @@ function buildOutputs(){
   }
   document.getElementById('confirmAr').innerText=`للتأكيد فقط، هذه هى الرحلة المطلوبة، صحيح؟\n${paxLineAr}\n${sAr}الأمتعة: ${bH} يد / ${bC} مشحون\n\n${legAr}`;
   document.getElementById('confirmEn').innerText=`Just to confirm — this is the requested flight, correct?\n${paxLineEn}\n${sEn}Baggage: ${bH} Hand / ${bC} Checked\n\n${legEn}`;
+  // بكس واحد مدمج
+  const combAr=document.getElementById('confirmCombined');
+  const combEn=document.getElementById('confirmCombinedEn');
+  if(combAr)combAr.innerText=`للتأكيد فقط، هذه هى الرحلة المطلوبة، صحيح؟\n${paxLineAr}\n${sAr}الأمتعة: ${bH} يد / ${bC} مشحون\n\n${legAr}`;
+  if(combEn)combEn.innerText=`Just to confirm — this is the requested flight, correct?\n${paxLineEn}\n${sEn}Baggage: ${bH} Hand / ${bC} Checked\n\n${legEn}`;
 }
 
 function showHiddenDetails(){
@@ -919,15 +1239,25 @@ function copyText(id,btn){
 }
 
 window.resetAll=function(){
-  ['rawSeg','totalFare'].forEach(id=>document.getElementById(id).value='');
+  ['rawSeg','totalFare','penaltyAmount','paxNamesText'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  paxCounts={adt:1,chd:0,inf:0};
   document.getElementById('paxCount').value='1';
+  document.getElementById('adtCount').value='1';
+  document.getElementById('chdCount').value='0';
+  document.getElementById('infCount').value='0';
+  document.getElementById('adtDisplay').textContent='1';
+  document.getElementById('chdDisplay').textContent='0';
+  document.getElementById('infDisplay').textContent='0';
+  const dv=document.getElementById('fareDiffValue');if(dv)dv.textContent='—';
+  const dvpp=document.getElementById('fareDiffPerPax');if(dvpp)dvpp.textContent='—';
+  const strip=document.getElementById('liveStrip');if(strip)strip.style.display='none';
   renderPaxNameFields();
   document.getElementById('nsValue').value='90';
   document.getElementById('nsUnit').selectedIndex=0;
   const b=document.getElementById('nsBadge');if(b){b.textContent='—';b.style.background='#94a3b8';}
   const tb=document.getElementById('tripBadge');if(tb){tb.textContent='—';tb.style.background='#94a3b8';}
   document.getElementById('currency').selectedIndex=0;
-  document.getElementById('tripType').selectedIndex=0;
+  setTripType('international');
   document.getElementById('bHand').value='7KG';
   document.getElementById('bCheck').value='20KG';
   parsedFlightsData=[];editingIndex=-1;
@@ -936,12 +1266,31 @@ window.resetAll=function(){
   document.getElementById('waitingMsg').style.display='block';
   document.getElementById('detailsSection').style.display='none';
   document.getElementById('acceptBtn').style.display='block';
-  ['quoteAr','quoteEn','internalLog','confirmAr','confirmEn'].forEach(id=>document.getElementById(id).innerText='');
+  ['quoteAr','quoteEn','internalLog','confirmAr','confirmEn','confirmCombined','confirmCombinedEn'].forEach(id=>document.getElementById(id).innerText='');
 };
 
+// ── منع تغيير القيم بالماوس (scroll / drag) ──
+document.addEventListener('wheel', function(e){
+  if(document.activeElement && document.activeElement.type==='number'){
+    document.activeElement.blur();
+  }
+}, {passive:false});
+document.querySelectorAll('input[type="number"]').forEach(el=>{
+  el.addEventListener('wheel', e=>e.preventDefault(), {passive:false});
+  el.addEventListener('mousedown', e=>{if(e.button!==0)e.preventDefault();});
+});
+document.querySelectorAll('input,textarea').forEach(el=>{
+  el.setAttribute('ondragover','event.preventDefault()');
+  el.setAttribute('ondrop','event.preventDefault()');
+});
 window.setLang=setLang;window.runAll=runAll;window.showHiddenDetails=showHiddenDetails;
 window.copyText=copyText;window.startEdit=startEdit;window.cancelEdit=cancelEdit;window.saveEdit=saveEdit;
+window.calcFareDiff=calcFareDiff;window.changePax=changePax;window.changePaxType=changePaxType;
+window.openFeesPanel=openFeesPanel;window.closeFeesPanel=closeFeesPanel;window.confirmFeesPanel=confirmFeesPanel;
+window.setTripType=setTripType;window.updateCurrencyLabel=updateCurrencyLabel;
 renderPaxNameFields();
+setTripType('international');
+document.getElementById('feesOverlay').classList.add('hidden');
 </script>
 <div style="text-align:center;padding:24px 0 12px;color:var(--muted);font-size:.72rem;letter-spacing:.4px;font-weight:600;">
   powered by <span style="color:var(--primary);font-weight:800;">Mohamed Rezk</span>
