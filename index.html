@@ -138,7 +138,7 @@ hr{border:0;border-top:1px solid var(--border);margin:24px 0;}
       <div id="parsedFlights" class="parsed-flights"></div>
       <div class="baggage-row">
         <div><label id="lbl-hand">حقيبة يد</label><input type="text" id="bHand" value="7KG" oninput="runAll()"></div>
-        <div><label id="lbl-check">حقيبة شحن</label><input type="text" id="bCheck" value="20KG" oninput="runAll()"></div>
+        <div><label id="lbl-check">حقيبة شحن</label><input type="text" id="bCheck" value="0 KG" oninput="runAll()"></div>
       </div>
     </div>
 
@@ -765,12 +765,46 @@ function parseSeg(text){
 }
 
 function smartExtract(text){
-  // Split by flight headers or multiple flight numbers
   let segs=[];
+
+  // 1. Split by explicit outbound/inbound headers
   const hRe=/\b(departure\s+flight|return\s+flight|outbound|inbound|رحلة\s+الذهاب|رحلة\s+العودة)\b/gi;
   const hM=[...text.matchAll(hRe)];
-  if(hM.length>=2){segs=hM.map((h,i)=>text.slice(h.index,i+1<hM.length?hM[i+1].index:text.length));}
-  else{
+  if(hM.length>=2){
+    segs=hM.map((h,i)=>text.slice(h.index,i+1<hM.length?hM[i+1].index:text.length));
+  }
+
+  // 2. Split by date anchors appearing multiple times (handles same flight# repeated)
+  if(segs.length===0){
+    const dateRe=/(?:\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}|\b\d{2}(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\d{2,4}\b)/gi;
+    const dateMatches=[...text.matchAll(dateRe)];
+    const dateAnchors=dateMatches.filter((m,i,a)=>i===0||m[0].toLowerCase()!==a[i-1][0].toLowerCase());
+    if(dateAnchors.length>=2){
+      let last=0;
+      dateAnchors.forEach((dm,i)=>{
+        if(i>0){segs.push(text.slice(last,dm.index));last=dm.index;}
+      });
+      segs.push(text.slice(last));
+    }
+  }
+
+  // 3. Split by 4+ airport codes in parens — every pair is a leg
+  if(segs.length===0){
+    const apRe=/\(([A-Z]{3})\)/g;
+    const aps=[...text.matchAll(apRe)].filter(m=>airportMap[m[1]]);
+    if(aps.length>=4){
+      const splitPoints=[];
+      for(let i=2;i<aps.length;i+=2)splitPoints.push(aps[i].index);
+      if(splitPoints.length>=1){
+        let last=0;
+        splitPoints.forEach(sp=>{segs.push(text.slice(last,sp));last=sp;});
+        segs.push(text.slice(last));
+      }
+    }
+  }
+
+  // 4. Original: split by distinct flight numbers
+  if(segs.length===0){
     const fnRe=/\b([A-Z0-9]{2})\s?[-]?\s?(\d{2,4})\b/g;
     const fns=[...text.matchAll(fnRe)].filter(m=>airDB[m[1].toUpperCase()]);
     const uniq=[...new Set(fns.map(m=>m[1].toUpperCase()+m[2]))];
@@ -780,7 +814,18 @@ function smartExtract(text){
         .forEach((fm,i,a)=>{if(i>0){segs.push(text.slice(last,fm.index));last=fm.index;}});
       segs.push(text.slice(last));
     }
+    // Same flight# appears twice → split at second occurrence
+    if(segs.length===0&&fns.length>=2){
+      const seen={};let last=0;
+      fns.forEach(fm=>{
+        const key=fm[1].toUpperCase()+fm[2];
+        if(seen[key]){segs.push(text.slice(last,fm.index));last=fm.index;}
+        seen[key]=true;
+      });
+      if(last>0)segs.push(text.slice(last));
+    }
   }
+
   if(segs.length===0)segs=[text];
   const flights=segs.map(s=>parseSeg(s.trim())).filter(Boolean);
   return flights.length?flights:[parseSeg(text)].filter(Boolean);
@@ -1067,8 +1112,15 @@ function buildOutputs(){
   // ── Airline fee breakdown ──
   const penaltyPerPax=parseFloat(document.getElementById('penaltyAmount').value)||0;
   const penaltyAmt=penaltyPerPax*pax; // total penalty = per-pax × pax count
-  const fareDiff=penaltyPerPax>0?(fare-penaltyAmt):null;
-  const fareDiffPerPax=fareDiff!==null?fareDiff/pax:null;
+
+  // ── Core fee calculation ──
+  const airT=fare+(fare*0.04);
+  const mosT = feePerPax * Math.min(paxCounts.adt + paxCounts.chd, 4);
+  const grand=airT+mosT;
+
+  // ── Fare Diff: grand - (penalty × pax) ÷ pax ──
+  const fareDiff = penaltyPerPax>0 ? (grand - penaltyAmt-mosT) : null;
+  const fareDiffPerPax = fareDiff!==null ? fareDiff/pax : null;
 
   // Update live diff display (in panel)
   const diffEl=document.getElementById('fareDiffValue');
@@ -1081,64 +1133,117 @@ function buildOutputs(){
     if(diffPPEl)diffPPEl.textContent=fareDiffPerPax.toFixed(2)+' '+curr;
   }
 
-  // ── Core fee calculation ──
-  const airT=fare+(fare*0.04);
-  const amendPerPax=feePerPax; // already includes VAT
-
-  const noAr=`الحجز سيصبح غير قابل للتعديل قبل موعد الإقلاع بـ ${nsVal} ${nsAr}.`;
-  const noEn=`Your booking will become non-changeable ${nsVal} ${nsEn} before the departure time.`;
+  // ── صياغة الوحدة الزمنية ──
+  const nsNum=parseFloat(nsVal)||0;
+  const nsUnit=nsEl.options[nsEl.selectedIndex].value;
+  // عربي: ساعات للأرقام 3-10، ساعة لما عدا ذلك
+  let nsArWord;
+  if(nsUnit==='min'){nsArWord=nsAr;}
+  else{nsArWord=(nsNum>=3&&nsNum<=10)?'ساعات':'ساعة';}
+  // إنجليزي: hour للرقم 1 فقط، hours لأي رقم غيره
+  let nsEnWord;
+  if(nsUnit==='min'){nsEnWord=nsEn;}
+  else{nsEnWord=(nsNum===1)?'hour':'hours';}
+  const noAr=`الحجز سيصبح غير قابل للتعديل قبل موعد الإقلاع بـ ${nsVal} ${nsArWord}.`;
+  const noEn=`Your booking will become non-changeable ${nsVal} ${nsEnWord} before the departure time.`;
   const avAr='مع العلم أن السعر والإمكانية غير ثابتين.';
   const avEn='Knowing that the price and availability are not guaranteed.';
 
-  // ── فرق السعر في الرسالة (فقط إذا أُدخلت القيم) ──
+  // ── فرق السعر في الرسالة ──
   const cAr=currAr(curr);
-  const penaltyLineAr=penaltyPerPax>0?`غرامة الطيران: ${penaltyPerPax.toFixed(2)} ${cAr} للمسافر (إجمالي: ${penaltyAmt.toFixed(2)} ${cAr}).\n`:'';
+  const penaltyLineAr=penaltyPerPax>0?`رسوم التعديل لشركة الطيران: ${penaltyPerPax.toFixed(2)} ${cAr} للمسافر (إجمالي: ${penaltyAmt.toFixed(2)} ${cAr}).\n`:'';
   const fareDiffLineAr=fareDiffPerPax!==null?`فارق السعر للمسافر الواحد: ${fareDiffPerPax.toFixed(2)} ${cAr}.\n`:'';
-  const penaltyLineEn=penaltyPerPax>0?`Airline penalty: ${penaltyPerPax.toFixed(2)} ${curr}/pax (total: ${penaltyAmt.toFixed(2)} ${curr}).\n`:'';
+  const penaltyLineEn=penaltyPerPax>0?`Airline Amendment fees: ${penaltyPerPax.toFixed(2)} ${curr}/pax (total: ${penaltyAmt.toFixed(2)} ${curr}).\n`:'';
   const fareDiffLineEn=fareDiffPerPax!==null?`Fare difference per passenger: ${fareDiffPerPax.toFixed(2)} ${curr}.\n`:'';
 
-  // ── إجماليات لكل فئة ──
-  // البالغ  = غرامة + فرق السعر
-  // الطفل   = غرامة + فرق السعر
-  // الرضيع  = غرامة + فرق السعر (بدون رسوم مسافر)
+  // ── إجماليات لكل فئة — تظهر فقط إذا كان العدد > 0 وفي قيمة ──
   const fdpp = fareDiffPerPax !== null ? fareDiffPerPax : 0;
   const penPP = penaltyPerPax || 0;
+
+  // ADT: penalty + fare diff — يظهر دائماً إذا في قيمة
   const adtTotal = penPP + fdpp;
+  const adtLineAr = (paxCounts.adt>0 && adtTotal!==0) ? `إجمالي الرسوم للبالغ: ${adtTotal.toFixed(2)} ${cAr}.\n` : '';
+  const adtLineEn = (paxCounts.adt>0 && adtTotal!==0) ? `Total fees per adult: ${adtTotal.toFixed(2)} ${curr}.\n` : '';
+
+  // CHD: penalty + fare diff — يظهر فقط إذا في أطفال
   const chdTotal = penPP + fdpp;
-  const infTotal = fdpp; // فرق السعر فقط — بدون غرامة ولا رسوم مسافر
+  const chdLineAr = (paxCounts.chd>0 && chdTotal!==0) ? `إجمالي الرسوم للطفل: ${chdTotal.toFixed(2)} ${cAr}.\n` : '';
+  const chdLineEn = (paxCounts.chd>0 && chdTotal!==0) ? `Total fees per child: ${chdTotal.toFixed(2)} ${curr}.\n` : '';
 
-  // الحد الأقصى لرسوم المسافر: 4 مسافرين (البالغ + الطفل فقط، الرضيع لا يُحسب)
-  const mosT = feePerPax * Math.min(paxCounts.adt + paxCounts.chd, 4);
-  const grand=airT+mosT;
-
-  // نعرض سطر الإجمالي فقط لو في قيمة
-  const adtLineAr = adtTotal !== 0 ? `إجمالي الرسوم للبالغ: ${adtTotal.toFixed(2)} ${cAr}.\n` : '';
-  const chdLineAr = chdTotal !== 0 ? `إجمالي الرسوم للطفل: ${chdTotal.toFixed(2)} ${cAr}.\n` : '';
-  const infLineAr = infTotal !== 0 ? `إجمالي الرسوم للرضيع: ${infTotal.toFixed(2)} ${cAr}.\n` : '';
-  const adtLineEn = adtTotal !== 0 ? `Total fees per adult: ${adtTotal.toFixed(2)} ${curr}.\n` : '';
-  const chdLineEn = chdTotal !== 0 ? `Total fees per child: ${chdTotal.toFixed(2)} ${curr}.\n` : '';
-  const infLineEn = infTotal !== 0 ? `Total fees for the infant: ${infTotal.toFixed(2)} ${curr}.\n` : '';
+  // INF: fare diff فقط، بدون penalty — يظهر فقط إذا في رضع
+  const infTotal = fdpp;
+  const infLineAr = (paxCounts.inf>0 && infTotal!==0) ? `إجمالي الرسوم للرضيع: ${infTotal.toFixed(2)} ${cAr}.\n` : '';
+  const infLineEn = (paxCounts.inf>0 && infTotal!==0) ? `Total fees for the infant: ${infTotal.toFixed(2)} ${curr}.\n` : '';
 
   // ── أسماء المسافرين في الـ quote ──
-  let paxNamesQuoteAr='',paxNamesQuoteEn='';
-  if(paxNames.length){
-    if(pax===1){
-      paxNamesQuoteAr=`اسم المسافر: ${paxNames[0]}\n`;
-      paxNamesQuoteEn=`Passenger Name: ${paxNames[0]}\n`;
-    }else{
-      paxNamesQuoteAr=`أسماء المسافرين:\n${paxNames.map((n,i)=>`${i+1}. ${n}`).join('\n')}\n`;
-      paxNamesQuoteEn=`Passenger Names:\n${paxNames.map((n,i)=>`${i+1}. ${n}`).join('\n')}\n`;
+
+
+let paxNamesQuoteAr = '', paxNamesQuoteEn = '';
+
+if (Array.isArray(paxNames) && paxNames.length > 0) {
+
+    let cleanedNamesArray = paxNames.map(name => {
+        return String(name)
+            .replace(/\b(ADT|CHD|INF)\b/gi, "")  // حذف نوع المسافر
+            .replace(/[\/\-]/g, " ")              // تحويل / و - إلى مسافة
+            .replace(/\bMR\b|\bMRS\b|\bMS\b|\bMISS\b|\bDR\b/gi, m => m)  // إبقاء اللقب
+            .split(/\s+/)                         // تقطيع عند المسافات
+            .filter(word => word.trim().length > 0) // حذف الفراغات الفارغة
+            .join(" ");                           // دمج بمسافة واحدة
+    });
+
+    // تحويل pax لرقم للتأكد
+    let paxCount = parseInt(pax);
+
+    if (paxCount === 1) {
+        paxNamesQuoteAr = `اسم المسافر: ${cleanedNamesArray[0]}\n`;
+        paxNamesQuoteEn = `Passenger Name: ${cleanedNamesArray[0]}\n`;
+    } else {
+        let list = cleanedNamesArray.map((n, i) => `${i + 1}. ${n}`).join('\n');
+        paxNamesQuoteAr = `أسماء المسافرين:\n${list}\n`;
+        paxNamesQuoteEn = `Passenger Names:\n${list}\n`;
     }
+}
+
+
+
+  // ── ملخص الرحلات للـ quote ──
+  let flightSummaryAr='',flightSummaryEn='';
+  if(parsedFlightsData.length>0){
+    const isMulti=parsedFlightsData.length>1;
+    if(isMulti){
+      flightSummaryAr='تفاصيل الرحلة:\n';
+      flightSummaryEn='Flight Details:\n';
+    }
+    parsedFlightsData.forEach((f,i)=>{
+      const dA=to12Ar(f.time),aA=f.arrTime&&f.arrTime!=='??:??'?to12Ar(f.arrTime):'';
+      const dE=to12En(f.time),aE=f.arrTime&&f.arrTime!=='??:??'?to12En(f.arrTime):'';
+      if(isMulti){
+        flightSummaryAr+=`الرحلة ${i+1}: ${f.fromAr} (${f.fromCode}) ← ${f.toAr} (${f.toCode}) | ${dA}${aA?' ← '+aA:''} | ${f.dateAr}`;
+        flightSummaryEn+=`Leg ${i+1}: ${f.fromEn} (${f.fromCode}) → ${f.toEn} (${f.toCode}) | ${dE}${aE?' → '+aE:''} | ${f.dateEn}`;
+        if(f.terminal)flightSummaryAr+=` | صالة ${f.terminal}`;
+        if(f.terminal)flightSummaryEn+=` | T${f.terminal.replace(/^T/i,'')}`;
+        flightSummaryAr+=` | ${f.airlineAr}${f.flightNum?' رحلة '+f.airlineCode+f.flightNum:''}\n`;
+        flightSummaryEn+=` | ${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''}\n`;
+        if(f.layoverAr)flightSummaryAr+=`   ⏳ توقف: ${f.layoverAr}\n`;
+        if(f.layoverEn)flightSummaryEn+=`   ⏳ Layover: ${f.layoverEn}\n`;
+      }else{
+        flightSummaryAr=`${f.fromAr} (${f.fromCode}) → ${f.toAr} (${f.toCode}) | ${dA}${aA?' → '+aA:''} | ${f.dateAr}${f.terminal?' | صالة '+f.terminal:''}\n`;
+        flightSummaryEn=`${f.fromEn} (${f.fromCode}) → ${f.toEn} (${f.toCode}) | ${dE}${aE?' → '+aE:''} | ${f.dateEn}${f.terminal?' | T'+f.terminal.replace(/^T/i,''):''}\n`;
+      }
+    });
+    flightSummaryAr+='\n';
+    flightSummaryEn+='\n';
   }
 
   let qAr,qEn;
   if(trip==='domestic'){
-    qAr=`${paxNamesQuoteAr}${penaltyLineAr}${fareDiffLineAr}رسوم المسافر ${baseFee} ${cAr} لكل مسافر وبعد إضافة ضريبة القيمة المضافة ستصبح ${feePerPax.toFixed(2)} ${cAr} لكل مسافر.\n${adtLineAr}${chdLineAr}${infLineAr}\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${cAr}.\n${avAr}\n${noAr}`;
-    qEn=`${paxNamesQuoteEn}${penaltyLineEn}${fareDiffLineEn}Almosafer fees: ${baseFee} ${curr} per passenger and after adding VAT it will be ${feePerPax.toFixed(2)} ${curr} per passenger.\n${adtLineEn}${chdLineEn}${infLineEn}\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
+    qAr=`${paxNamesQuoteAr}${flightSummaryAr}${penaltyLineAr}${fareDiffLineAr}رسوم المسافر ${baseFee} ${cAr} لكل مسافر وبعد إضافة ضريبة القيمة المضافة ستصبح ${feePerPax.toFixed(2)} ${cAr} لكل مسافر.\n${adtLineAr}${chdLineAr}${infLineAr}\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${cAr}.\n${avAr}\n${noAr}`;
+    qEn=`${paxNamesQuoteEn}${flightSummaryEn}${penaltyLineEn}${fareDiffLineEn}Almosafer fees: ${baseFee} ${curr} per passenger and after adding VAT it will be ${feePerPax.toFixed(2)} ${curr} per passenger.\n${adtLineEn}${chdLineEn}${infLineEn}\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
   }else{
     const ppAr=pax>1?' لكل مسافر':'';const ppEn=pax>1?' per passenger':'';
-    qAr=`${paxNamesQuoteAr}${penaltyLineAr}${fareDiffLineAr}رسوم المسافر ${feePerPax.toFixed(2)} ${cAr}${ppAr}.\n${adtLineAr}${chdLineAr}${infLineAr}\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${cAr}.\n${avAr}\n${noAr}`;
-    qEn=`${paxNamesQuoteEn}${penaltyLineEn}${fareDiffLineEn}Almosafer fees: ${feePerPax.toFixed(2)} ${curr}${ppEn}.\n${adtLineEn}${chdLineEn}${infLineEn}\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
+    qAr=`${paxNamesQuoteAr}${flightSummaryAr}${penaltyLineAr}${fareDiffLineAr}رسوم المسافر ${feePerPax.toFixed(2)} ${cAr}${ppAr}.\n${adtLineAr}${chdLineAr}${infLineAr}\nإجمالي مبلغ التعديل المطلوب: ${grand.toFixed(2)} ${cAr}.\n${avAr}\n${noAr}`;
+    qEn=`${paxNamesQuoteEn}${flightSummaryEn}${penaltyLineEn}${fareDiffLineEn}Almosafer fees: ${feePerPax.toFixed(2)} ${curr}${ppEn}.\n${adtLineEn}${chdLineEn}${infLineEn}\nTotal amendment amount: ${grand.toFixed(2)} ${curr}.\n${avEn}\n${noEn}`;
   }
   document.getElementById('quoteAr').innerText=qAr;
   document.getElementById('quoteEn').innerText=qEn;
@@ -1150,25 +1255,42 @@ function buildOutputs(){
   document.getElementById('internalLog').innerText=`cx asked to amend to\n${log}\n${paxLine}airline fees: ${airT.toFixed(2)} ${curr}\nmos fees:      ${mosT.toFixed(2)} ${curr}\ntotal:         ${grand.toFixed(2)} ${curr}\n\npl sent`;
 
   let sAr='',sEn='';
-  parsedFlightsData.forEach(f=>{
+  const isMultiLeg=parsedFlightsData.length>1;
+  if(isMultiLeg){
+    sAr+=`✈️ *رحلة مع توقف — ${parsedFlightsData.length} مقاطع*\n\n`;
+    sEn+=`✈️ *Connecting Flight — ${parsedFlightsData.length} Legs*\n\n`;
+  }
+  parsedFlightsData.forEach((f,idx)=>{
     const dA=to12Ar(f.time),aA=f.arrTime&&f.arrTime!=='??:??'?to12Ar(f.arrTime):'';
     const dE=to12En(f.time),aE=f.arrTime&&f.arrTime!=='??:??'?to12En(f.arrTime):'';
-    sAr+=`من *${f.fromAr} (${f.fromCode})${f.terminal?' صالة '+f.terminal.replace(/^T/i,''):''}* إلى *${f.toAr} (${f.toCode})${f.arrTerminal?' صالة '+f.arrTerminal.replace(/^T/i,''):''}*\nوقت المغادرة: ${dA}${aA?' | وصول: '+aA:''} ┃ *${f.dateAr}*\n*${f.stopover?'رحلة مع توقف':'رحلة مباشرة'}* ┃ (${f.airlineAr}${f.flightNum?' رحلة '+f.airlineCode+f.flightNum:''})\n`;
+    if(isMultiLeg){
+      sAr+=`*الجزء ${idx+1}:*\n`;
+      sEn+=`*Leg ${idx+1}:*\n`;
+    }
+    sAr+=`من *${f.fromAr} (${f.fromCode})${f.terminal?' صالة '+f.terminal.replace(/^T/i,''):''}* إلى *${f.toAr} (${f.toCode})${f.arrTerminal?' صالة '+f.arrTerminal.replace(/^T/i,''):''}*\nوقت المغادرة: ${dA}${aA?' | وصول: '+aA:''} ┃ *${f.dateAr}*\n*${isMultiLeg?(idx===parsedFlightsData.length-1?'الوصول النهائي':'رحلة مع توقف'):(f.stopover?'رحلة مع توقف':'رحلة مباشرة')}* ┃ (${f.airlineAr}${f.flightNum?' رحلة '+f.airlineCode+f.flightNum:''})\n`;
     if(f.layoverAr)sAr+=`⏳ *توقف: ${f.layoverAr}*\n`;
     sAr+='\n';
-    sEn+=`From *${f.fromEn} (${f.fromCode})${f.terminal?' T'+f.terminal.replace(/^T/i,''):''}* to *${f.toEn} (${f.toCode})${f.arrTerminal?' T'+f.arrTerminal.replace(/^T/i,''):''}*\nDeparture: ${dE}${aE?' | Arrival: '+aE:''} ┃ *${f.dateEn}*\n*${f.stopover?'Connecting Flight':'Direct Flight'}* ┃ (${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''})\n`;
+    sEn+=`From *${f.fromEn} (${f.fromCode})${f.terminal?' T'+f.terminal.replace(/^T/i,''):''}* to *${f.toEn} (${f.toCode})${f.arrTerminal?' T'+f.arrTerminal.replace(/^T/i,''):''}*\nDeparture: ${dE}${aE?' | Arrival: '+aE:''} ┃ *${f.dateEn}*\n*${isMultiLeg?(idx===parsedFlightsData.length-1?'Final Arrival':'Connecting'):(f.stopover?'Connecting Flight':'Direct Flight')}* ┃ (${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''})\n`;
     if(f.layoverEn)sEn+=`⏳ *Layover: ${f.layoverEn}*\n`;
     sEn+='\n';
   });
   const legAr='برجاء العلم بأنه فى حال إتمام تعديل الرحلة على حجزك إلى رحلة أخرى قد يتم حذف جميع الخدمات الإضافية السابقة من جانب خط الطيران مثل ( المقاعد, الحقائب الإضافية,تأخير ذكي, الوجبات,رسوم اصدار بطاقه الصعود , الالغاء المجانى و التامين على الرحله,حماية الأمتعة), وفى حال تم حذفها سوف تحتاج إضافة اى من هذه الخدمات الإضافية مرة اخرى وسوف يتم دفع رسومها المعروضة من جانب خط الطيران إذا متاح إضافتها على الرحلة الجديدة.';
   const legEn='Please note that if you change your flight reservation to another flight, all additional services previously provided by the airline (such as seats, extra bags, smart delay, meals, boarding pass fees, free cancellation, flight insurance, and baggage protection) may be removed. If they are removed, you will need to add any of these additional services again, and the fees offered by the airline will be paid if they can be added to the new flight.';
   let paxLineAr='',paxLineEn='';
+  // دالة تنظيف الاسم — تحذف ADT/CHD/INF والرموز وتجمع الكلمات
+  const cleanName = n => String(n)
+    .replace(/\b(ADT|CHD|INF)\b/gi, '')
+    .replace(/[\/\-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.trim().length > 0)
+    .join(' ');
+  const cleanedPaxNames = paxNames.map(cleanName);
   if(pax===1){
-    if(paxNames.length)paxLineAr='اسم المسافر: '+paxNames[0]+'\n';
-    if(paxNames.length)paxLineEn='Passenger Name: '+paxNames[0]+'\n';
+    if(cleanedPaxNames.length)paxLineAr='اسم المسافر: '+cleanedPaxNames[0]+'\n';
+    if(cleanedPaxNames.length)paxLineEn='Passenger Name: '+cleanedPaxNames[0]+'\n';
   }else{
-    const namesListAr=paxNames.length?'\n'+paxNames.map((n,i)=>`${i+1}. ${n}`).join('\n'):'';
-    const namesListEn=paxNames.length?'\n'+paxNames.map((n,i)=>`${i+1}. ${n}`).join('\n'):'';
+    const namesListAr=cleanedPaxNames.length?'\n'+cleanedPaxNames.map((n,i)=>`${i+1}. ${n}`).join('\n'):'';
+    const namesListEn=cleanedPaxNames.length?'\n'+cleanedPaxNames.map((n,i)=>`${i+1}. ${n}`).join('\n'):'';
     paxLineAr=`عدد المسافرين: ${pax} مسافرين${namesListAr}\n`;
     paxLineEn=`Number of Passengers: ${pax} passengers${namesListEn}\n`;
   }
