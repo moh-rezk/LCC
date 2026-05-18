@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" id="htmlTag">
 <head>
@@ -2418,10 +2417,10 @@ function buildOutputs(){
       const renderLeg=(f)=>{
         const dA=to12Ar(f.time),aA=f.arrTime&&f.arrTime!=='??:??'?to12Ar(f.arrTime):'';
         const dE=to12En(f.time),aE=f.arrTime&&f.arrTime!=='??:??'?to12En(f.arrTime):'';
-        let ar=`${f.fromAr} (${f.fromCode})${f.terminal?' صالة '+f.terminal.replace(/^T/i,''):''} الى ${f.toAr} (${f.toCode})${f.arrTerminal?' صالة '+f.arrTerminal.replace(/^T/i,''):''}\n`;
+        let ar=`${f.fromAr} (${f.fromCode}) الى ${f.toAr} (${f.toCode})\n`;
         ar+=`${dA}${aA?' | وصول '+aA:''} | ${f.dateAr}\n`;
         ar+=`🛫 ${f.airlineAr}${f.flightNum?' رحلة '+f.airlineCode+f.flightNum:''}\n`;
-        let en=`${f.fromEn} (${f.fromCode})${f.terminal?' T'+f.terminal.replace(/^T/i,''):''} to ${f.toEn} (${f.toCode})${f.arrTerminal?' T'+f.arrTerminal.replace(/^T/i,''):''}\n`;
+        let en=`${f.fromEn} (${f.fromCode}) to ${f.toEn} (${f.toCode})\n`;
         en+=`${dE}${aE?' | Arrival '+aE:''} | ${f.dateEn}\n`;
         en+=`🛫 ${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''}\n`;
         return{ar,en};
@@ -2445,15 +2444,15 @@ function buildOutputs(){
         const dA=to12Ar(f.time),aA=f.arrTime&&f.arrTime!=='??:??'?to12Ar(f.arrTime):'';
         const dE=to12En(f.time),aE=f.arrTime&&f.arrTime!=='??:??'?to12En(f.arrTime):'';
         if(isMulti){
-          flightSummaryAr+=`الجزء ${i+1}: ${f.fromAr} (${f.fromCode})${f.terminal?' صالة '+f.terminal.replace(/^T/i,''):''} الى ${f.toAr} (${f.toCode})${f.arrTerminal?' صالة '+f.arrTerminal.replace(/^T/i,''):''}\n`;
+          flightSummaryAr+=`الجزء ${i+1}: ${f.fromAr} (${f.fromCode}) الى ${f.toAr} (${f.toCode})\n`;
           flightSummaryAr+=`   ${dA}${aA?' | وصول '+aA:''} | ${f.dateAr} | ${f.airlineAr}${f.flightNum?' '+f.airlineCode+f.flightNum:''}\n`;
-          flightSummaryEn+=`Leg ${i+1}: ${f.fromEn} (${f.fromCode})${f.terminal?' T'+f.terminal.replace(/^T/i,''):''} to ${f.toEn} (${f.toCode})${f.arrTerminal?' T'+f.arrTerminal.replace(/^T/i,''):''}\n`;
+          flightSummaryEn+=`Leg ${i+1}: ${f.fromEn} (${f.fromCode}) to ${f.toEn} (${f.toCode})\n`;
           flightSummaryEn+=`   ${dE}${aE?' | Arrival '+aE:''} | ${f.dateEn} | ${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''}\n`;
           if(f.layoverAr)flightSummaryAr+=`   توقف في ${f.toAr}: ${f.layoverAr}\n`;
           if(f.layoverEn)flightSummaryEn+=`   Layover in ${f.toEn}: ${f.layoverEn}\n`;
         }else{
-          flightSummaryAr=`${f.fromAr} (${f.fromCode})${f.terminal?' صالة '+f.terminal.replace(/^T/i,''):''} الى ${f.toAr} (${f.toCode})${f.arrTerminal?' صالة '+f.arrTerminal.replace(/^T/i,''):''}\n${dA}${aA?' | وصول '+aA:''} | ${f.dateAr}\n🛫 ${f.airlineAr}${f.flightNum?' رحلة '+f.airlineCode+f.flightNum:''}\n`;
-          flightSummaryEn=`${f.fromEn} (${f.fromCode})${f.terminal?' T'+f.terminal.replace(/^T/i,''):''} to ${f.toEn} (${f.toCode})${f.arrTerminal?' T'+f.arrTerminal.replace(/^T/i,''):''}\n${dE}${aE?' | Arrival '+aE:''} | ${f.dateEn}\n🛫 ${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''}\n`;
+          flightSummaryAr=`${f.fromAr} (${f.fromCode}) الى ${f.toAr} (${f.toCode})\n${dA}${aA?' | وصول '+aA:''} | ${f.dateAr}\n🛫 ${f.airlineAr}${f.flightNum?' رحلة '+f.airlineCode+f.flightNum:''}\n`;
+          flightSummaryEn=`${f.fromEn} (${f.fromCode}) to ${f.toEn} (${f.toCode})\n${dE}${aE?' | Arrival '+aE:''} | ${f.dateEn}\n🛫 ${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''}\n`;
         }
       });
     }
@@ -2498,10 +2497,10 @@ function buildOutputs(){
       sAr+=idx===0?`*✈️ الذهاب:*\n`:`*↩️ العودة:*\n`;
       sEn+=idx===0?`*✈️ Departing:*\n`:`*↩️ Return:*\n`;
     } else if(isMultiLeg){sAr+=`*الجزء ${idx+1}:*\n`;sEn+=`*Leg ${idx+1}:*\n`;}
-    sAr+=`من *${f.fromAr} (${f.fromCode})${f.terminal?' صالة '+f.terminal.replace(/^T/i,''):''}* الى *${f.toAr} (${f.toCode})${f.arrTerminal?' صالة '+f.arrTerminal.replace(/^T/i,''):''}*\nوقت المغادرة: ${dA}${aA?' | وصول: '+aA:''} | *${f.dateAr}*\n*${isMultiLeg?(idx===parsedFlightsData.length-1?'الوصول النهائي':'رحلة مع توقف'):(f.stopover?'رحلة مع توقف':'رحلة مباشرة')}* ┃ (${f.airlineAr}${f.flightNum?' رحلة '+f.airlineCode+f.flightNum:''})\n`;
+    sAr+=`من *${f.fromAr} (${f.fromCode})* الى *${f.toAr} (${f.toCode})*\nوقت المغادرة: ${dA}${aA?' | وصول: '+aA:''} | *${f.dateAr}*\n*${isMultiLeg?(idx===parsedFlightsData.length-1?'الوصول النهائي':'رحلة مع توقف'):(f.stopover?'رحلة مع توقف':'رحلة مباشرة')}* ┃ (${f.airlineAr}${f.flightNum?' رحلة '+f.airlineCode+f.flightNum:''})\n`;
     if(f.layoverAr)sAr+=`توقف في ${f.toAr}: ${f.layoverAr}\n`;
     sAr+='\n';
-    sEn+=`From *${f.fromEn} (${f.fromCode})${f.terminal?' T'+f.terminal.replace(/^T/i,''):''}* to *${f.toEn} (${f.toCode})${f.arrTerminal?' T'+f.arrTerminal.replace(/^T/i,''):''}*\nDeparture: ${dE}${aE?' | Arrival: '+aE:''} | *${f.dateEn}*\n*${isMultiLeg?(idx===parsedFlightsData.length-1?'Final Arrival':'Connecting'):(f.stopover?'Connecting Flight':'Direct Flight')}* ┃ (${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''})\n`;
+    sEn+=`From *${f.fromEn} (${f.fromCode})* to *${f.toEn} (${f.toCode})*\nDeparture: ${dE}${aE?' | Arrival: '+aE:''} | *${f.dateEn}*\n*${isMultiLeg?(idx===parsedFlightsData.length-1?'Final Arrival':'Connecting'):(f.stopover?'Connecting Flight':'Direct Flight')}* ┃ (${f.airlineEn}${f.flightNum?' '+f.airlineCode+f.flightNum:''})\n`;
     if(f.layoverEn)sEn+=`Layover in ${f.toEn}: ${f.layoverEn}\n`;
     sEn+='\n';
   });
