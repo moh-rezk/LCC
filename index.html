@@ -186,6 +186,14 @@ body {
 .welcome-btn:hover { background: var(--emerald-d); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.45); }
 
 /* ══ LOCKED INPUT STATE ══ */
+@keyframes unlockPop {
+  0%   { opacity:0; transform:scale(.97) translateY(4px); }
+  60%  { opacity:1; transform:scale(1.01) translateY(-1px); }
+  100% { opacity:1; transform:none; }
+}
+.input-unlocked {
+  animation: unlockPop .55s cubic-bezier(.34,1.56,.64,1) both;
+}
 .input-locked {
   opacity: 0.42;
   pointer-events: none;
@@ -193,6 +201,7 @@ body {
   position: relative;
 }
 .lock-banner {
+  transition: opacity .3s ease;
   background: linear-gradient(90deg,#fef3c7,#fde68a);
   border: 1px solid #fcd34d;
   border-radius: 9px;
@@ -809,8 +818,8 @@ html[lang=ar] [data-en] { display: none !important; }
           </div>
           <div id="feesLockBanner" class="lock-banner" style="display:none;">
             <span>🔒</span>
-            <span data-ar>أدخل بيانات الرحلة الصحيحة أولاً لتفعيل هذا القسم</span>
-            <span data-en style="display:none;">Enter correct flight details first to unlock this section</span>
+            <span id="feesLockMsg" data-ar>أكمل بيانات الرحلة أولاً لتفعيل هذا القسم</span>
+            <span id="feesLockMsgEn" data-en style="display:none;">Complete flight data to unlock this section</span>
           </div>
           <div id="feesContent">
           <span class="ip-label"><span data-ar>إجمالي رسوم الطيران</span><span data-en>Total Airline Fees</span></span>
@@ -846,8 +855,8 @@ html[lang=ar] [data-en] { display: none !important; }
           </div>
           <div id="baggageLockBanner" class="lock-banner" style="display:none;">
             <span>🔒</span>
-            <span data-ar>أدخل بيانات الرحلة الصحيحة أولاً</span>
-            <span data-en style="display:none;">Enter correct flight details first</span>
+            <span data-ar>أكمل بيانات الرحلة أولاً</span>
+            <span data-en style="display:none;">Complete flight data first</span>
           </div>
           <div id="baggageContent">
           <div class="ip-grid2">
@@ -872,8 +881,8 @@ html[lang=ar] [data-en] { display: none !important; }
           </div>
           <div id="namesLockBanner" class="lock-banner" style="display:none;">
             <span>🔒</span>
-            <span data-ar>أدخل بيانات الرحلة الصحيحة أولاً</span>
-            <span data-en style="display:none;">Enter correct flight details first</span>
+            <span data-ar>أكمل بيانات الرحلة أولاً</span>
+            <span data-en style="display:none;">Complete flight data first</span>
           </div>
           <div id="namesContent">
           <span class="ip-label"><span data-ar>الصق الأسماء (كل اسم في سطر)</span><span data-en>Paste names (one per line)</span></span>
@@ -903,28 +912,8 @@ html[lang=ar] [data-en] { display: none !important; }
           </div>
         </div>
 
-        <!-- Flight Parse Error Message -->
-        <div id="flightErrorMsg" style="display:none;">
-          <div class="msg-placeholder" style="border:2px solid #fca5a5;background:#fff5f5;">
-            <div class="msg-placeholder-icon">⚠️</div>
-            <div class="msg-placeholder-title" style="color:#dc2626;">
-              <span data-ar>لم يتم التعرف على بيانات الرحلة</span>
-              <span data-en>Flight details not recognized</span>
-            </div>
-            <div class="msg-placeholder-sub" style="color:#991b1b;font-weight:600;margin-bottom:10px;">
-              <span data-ar>يرجى إدخال المعلومات التالية بشكل صحيح:</span>
-              <span data-en>Please enter the following information correctly:</span>
-            </div>
-            <div style="text-align:right;direction:rtl;width:100%;">
-              <div style="display:inline-block;text-align:right;font-size:12px;color:#7f1d1d;line-height:2.2;">
-                <div>🛫 <span data-ar><b>مطار الإقلاع والوصول</b> — مثل: JED, AHB</span><span data-en><b>Departure &amp; arrival airports</b> — e.g. JED, AHB</span></div>
-                <div>🕐 <span data-ar><b>وقت الإقلاع ووقت الوصول</b> — مثل: 06:35 ← 07:55</span><span data-en><b>Departure &amp; arrival times</b> — e.g. 06:35 → 07:55</span></div>
-                <div>📅 <span data-ar><b>تاريخ الرحلة</b> — مثل: 21 MAY 2026</span><span data-en><b>Flight date</b> — e.g. 21 MAY 2026</span></div>
-                <div>✈️ <span data-ar><b>اسم الطيران ورقم الرحلة</b> — مثل: XY 425</span><span data-en><b>Airline &amp; flight number</b> — e.g. XY 425</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Flight Parse Error Message — dynamic, built by JS -->
+        <div id="flightErrorMsg" style="display:none;"></div>
 
         <!-- Results -->
         <div id="calcResults" style="display:none;flex-direction:column;gap:14px;">
@@ -1132,16 +1121,41 @@ html[lang=ar] [data-en] { display: none !important; }
       <!-- No-show -->
       <div class="modal-section">
         <div class="modal-section-lbl"><span data-ar>وقت النو شو</span><span data-en>No-Show Window</span></div>
-        <div class="noshow-row">
-          <span id="nsBadge" style="font-size:11px;color:#b45309;font-weight:600;"></span>
-          <div style="display:flex;align-items:center;gap:6px;">
-            <input type="number" id="nsValue" value="90" min="0" class="noshow-inp" oninput="runAll()">
-            <select id="nsUnit" onchange="runAll()" style="padding:7px 9px;border:1px solid var(--border-s);border-radius:7px;font-family:inherit;font-size:12px;color:var(--text);background:#f8fafc;outline:none;cursor:pointer;">
-              <option value="min" data-ar="دقيقة" data-en="minutes">دقيقة</option>
-              <option value="hr" data-ar="ساعة" data-en="hours">ساعة</option>
-            </select>
-          </div>
+
+        <!-- Unit toggle buttons -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <button id="nsUnitMin" onclick="setNsUnit('min')"
+            style="flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--emerald);background:var(--emerald);color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;">
+            <span data-ar>دقيقة</span><span data-en>Minutes</span>
+          </button>
+          <button id="nsUnitHr" onclick="setNsUnit('hr')"
+            style="flex:1;padding:8px;border-radius:8px;border:1.5px solid var(--border-s);background:#f8fafc;color:var(--muted);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;">
+            <span data-ar>ساعة</span><span data-en>Hours</span>
+          </button>
         </div>
+
+        <!-- Number input with +/- controls -->
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;">
+          <button onclick="changeNsValue(-1)"
+            style="width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border-s);background:#f1f5f9;font-size:20px;line-height:1;cursor:pointer;font-weight:700;color:var(--slate);transition:.15s;"
+            onmousedown="startNsHold(-1)" onmouseup="stopNsHold()" onmouseleave="stopNsHold()">−</button>
+          <input type="number" id="nsValue" value="90" min="0" class="noshow-inp"
+            oninput="runAll()"
+            style="width:90px;text-align:center;font-size:22px;font-weight:700;color:var(--slate);border:1.5px solid var(--border-s);border-radius:10px;padding:8px;outline:none;font-family:'IBM Plex Mono',monospace;">
+          <button onclick="changeNsValue(+1)"
+            style="width:40px;height:40px;border-radius:50%;border:1.5px solid var(--slate);background:var(--slate);font-size:20px;line-height:1;cursor:pointer;font-weight:700;color:#fff;transition:.15s;"
+            onmousedown="startNsHold(+1)" onmouseup="stopNsHold()" onmouseleave="stopNsHold()">+</button>
+        </div>
+
+
+        <!-- Hidden select (still used by JS logic) -->
+        <select id="nsUnit" onchange="runAll()" style="display:none;">
+          <option value="min">دقيقة</option>
+          <option value="hr">ساعة</option>
+        </select>
+
+        <!-- Badge -->
+        <div id="nsBadge" style="font-size:11px;color:#b45309;font-weight:600;background:#fef3c7;border-radius:7px;padding:6px 10px;display:none;"></div>
       </div>
 
       <!-- Pax counters -->
@@ -1305,7 +1319,7 @@ async function loadFlightData() {
       airportMap[code] = { ar: val.ar, en: val.en };
     }
 
-    // airlines: convert {ar,en,country,type} → {ar,en}
+    // airlines
     airDB = {};
     for (const [code, val] of Object.entries(db.airlines)) {
       airDB[code] = { ar: val.ar, en: val.en };
@@ -1323,6 +1337,7 @@ async function loadFlightData() {
     _dataLoaded = true;
     // Re-run after data is ready
     buildFormatHelper();
+    buildNsPresets(document.getElementById('nsUnit').value||'min');
     setTripType('international');
     buildCountryOptions();
     updateFeeBtnLabels();
@@ -1330,6 +1345,8 @@ async function loadFlightData() {
     document.getElementById('feesOverlay').style.display = 'none';
     updateInputLocks();
     updateExtractBtn();
+    // ── Update site meta from JSON ──
+    _updateSiteMeta(db);
     console.log('✅ flight_data.json loaded:', Object.keys(airportMap).length, 'airports,', Object.keys(airDB).length, 'airlines');
   } catch (err) {
     console.warn('⚠️ Could not load flight_data.json, using built-in data.', err);
@@ -1718,6 +1735,54 @@ function autoDetectTripType(flights){
 }
 
 // ══ NO-SHOW RULES ══
+// ── NO-SHOW UI HELPERS ──
+let _nsHoldTimer = null;
+
+function setNsUnit(unit) {
+  document.getElementById('nsUnit').value = unit;
+  const minBtn = document.getElementById('nsUnitMin');
+  const hrBtn  = document.getElementById('nsUnitHr');
+  if (minBtn && hrBtn) {
+    if (unit === 'min') {
+      minBtn.style.cssText += ';background:var(--emerald);color:#fff;border-color:var(--emerald);';
+      hrBtn.style.cssText  += ';background:#f8fafc;color:var(--muted);border-color:var(--border-s);';
+    } else {
+      hrBtn.style.cssText  += ';background:var(--emerald);color:#fff;border-color:var(--emerald);';
+      minBtn.style.cssText += ';background:#f8fafc;color:var(--muted);border-color:var(--border-s);';
+    }
+  }
+  runAll();
+}
+
+function changeNsValue(delta) {
+  const el = document.getElementById('nsValue');
+  let v = parseInt(el.value) || 0;
+  v = Math.max(0, v + delta);
+  el.value = v;
+  runAll();
+}
+
+function startNsHold(delta) {
+  stopNsHold();
+  _nsHoldTimer = setInterval(() => changeNsValue(delta), 120);
+}
+function stopNsHold() {
+  if (_nsHoldTimer) { clearInterval(_nsHoldTimer); _nsHoldTimer = null; }
+}
+
+// Override nsBadge display logic
+function _showNsBadge(text, color) {
+  const el = document.getElementById('nsBadge');
+  if (!el) return;
+  if (text) {
+    el.textContent = text;
+    el.style.color = color || '#b45309';
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 // noShowMap is populated from flight_data.json (or fallback in _useFallbackData)
 
 function applyNoShowRule(airlineCode){
@@ -1730,17 +1795,17 @@ function applyNoShowRule(airlineCode){
   if(minsMatch){
     nsValueEl.value=parseInt(minsMatch[1]);
     nsUnitEl.value='min';
-    if(nsBadgeEl){nsBadgeEl.textContent='✅ '+airlineCode+' ('+rule+')';nsBadgeEl.style.color='#d97706';}
+    if(nsBadgeEl){nsBadgeEl.textContent='✅ '+airlineCode+' ('+rule+')';nsBadgeEl.style.color='#d97706';nsBadgeEl.style.display='block';}
     return;
   }
   const simpleNum=rule.match(/^(\d+)$/);
   if(simpleNum){
     nsValueEl.value=parseInt(simpleNum[1]);
     nsUnitEl.value='hr';
-    if(nsBadgeEl){nsBadgeEl.textContent='✅ '+airlineCode;nsBadgeEl.style.color='#16a34a';}
+    if(nsBadgeEl){nsBadgeEl.textContent='✅ '+airlineCode;nsBadgeEl.style.color='#16a34a';nsBadgeEl.style.display='block';}
     return;
   }
-  if(nsBadgeEl){nsBadgeEl.textContent='⚠️ '+airlineCode+': '+rule;nsBadgeEl.style.color='#d97706';}
+  if(nsBadgeEl){nsBadgeEl.textContent='⚠️ '+airlineCode+': '+rule;nsBadgeEl.style.color='#d97706';nsBadgeEl.style.display='block';}
 }
 
 const monthMapAr={'يناير':'JAN','فبراير':'FEB','مارس':'MAR','أبريل':'APR','مايو':'MAY','يونيو':'JUN','يوليو':'JUL','أغسطس':'AUG','سبتمبر':'SEP','أكتوبر':'OCT','نوفمبر':'NOV','ديسمبر':'DEC','شباط':'FEB','آذار':'MAR','نيسان':'APR','أيار':'MAY','حزيران':'JUN','تموز':'JUL','آب':'AUG','أيلول':'SEP','تشرين الأول':'OCT','تشرين الثاني':'NOV','كانون الأول':'DEC','كانون الثاني':'JAN'};
@@ -2570,6 +2635,7 @@ function updatePanelFlightInfo(){
   if(f.airlineCode)tags.push({text:f.airlineCode+(f.flightNum?' '+f.flightNum:''),bg:'#dbeafe',color:'#1d4ed8'});
   const auto=autoDetectedTrip;
   if(auto)tags.push({text:auto==='domestic'?'داخلية 🏠':'دولية 🌍',bg:auto==='domestic'?'#fef9c3':'#ede9fe',color:auto==='domestic'?'#854d0e':'#6d28d9'});
+
   tags.forEach(t=>{const s=document.createElement('span');s.textContent=t.text;s.style.cssText=`background:${t.bg};color:${t.color};border-radius:6px;padding:3px 9px;font-size:10px;font-weight:700;`;infoTags.appendChild(s);});
   infoBox.style.display='block';
 }
@@ -2640,21 +2706,77 @@ function validateFlights(flights){
   const errDiv=document.getElementById('flightErrorMsg');
   if(!flights||!flights.length){if(errDiv)errDiv.style.display='none';return true;}
   const isAr=(currentLang==='ar');
-  let hasMissing=false;
-  flights.forEach((f)=>{
-    if(!f.fromCode||f.fromCode==='??') hasMissing=true;
-    if(!f.toCode  ||f.toCode==='??')   hasMissing=true;
-    if(!f.time    ||f.time==='??:??')  hasMissing=true;
-    if(!f.arrTime ||f.arrTime==='??:??') hasMissing=true;
-    if(!f.day||!f.mon||f.mon==='???')  hasMissing=true;
-    if(!f.airlineCode||f.airlineCode==='??') hasMissing=true;
+
+  // Collect missing fields per flight leg
+  const issues=[];
+  flights.forEach((f,idx)=>{
+    const legMissing=[];
+    if(!f.airlineCode||f.airlineCode==='??')
+      legMissing.push({ icon:'✈️', ar:'اسم الطيران ورقم الرحلة', en:'Airline & flight number', ex:'XY 425 / SV 373' });
+    if(!f.fromCode||f.fromCode==='??'||!f.toCode||f.toCode==='??')
+      legMissing.push({ icon:'🛫', ar:'مطار الإقلاع والوصول', en:'Departure & arrival airports', ex:'JED → RUH' });
+    if(!f.day||!f.mon||f.mon==='???')
+      legMissing.push({ icon:'📅', ar:'تاريخ الرحلة', en:'Flight date', ex:'21 MAY 2026' });
+    if(!f.time||f.time==='??:??')
+      legMissing.push({ icon:'🕐', ar:'وقت الإقلاع', en:'Departure time', ex:'06:35' });
+    if(!f.arrTime||f.arrTime==='??:??')
+      legMissing.push({ icon:'🕑', ar:'وقت الوصول', en:'Arrival time', ex:'07:55' });
+    if(legMissing.length) issues.push({ leg: idx+1, total: flights.length, missing: legMissing, f });
   });
-  if(!hasMissing){if(errDiv)errDiv.style.display='none';return true;}
+
+  if(!issues.length){if(errDiv)errDiv.style.display='none';return true;}
   if(!errDiv)return false;
+
+  // Build dynamic HTML
+  let html = `<div style="background:#fff5f5;border:2px solid #fca5a5;border-radius:14px;padding:18px 20px;font-family:inherit;">`;
+  html += `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+    <span style="font-size:26px;">⚠️</span>
+    <div>
+      <div style="font-size:14px;font-weight:700;color:#dc2626;">${isAr?'بيانات الرحلة غير مكتملة':'Incomplete Flight Data'}</div>
+      <div style="font-size:11px;color:#991b1b;margin-top:2px;">${isAr?'أكمل الحقول الناقصة في النص لتفعيل باقي الأدوات':'Complete the missing fields to unlock the other tools'}</div>
+    </div>
+  </div>`;
+
+  issues.forEach(({leg, total, missing, f}) => {
+    const legLabel = total>1 ? (isAr?`الرحلة ${leg} من ${total}`:`Leg ${leg} of ${total}`) : '';
+    const routeLabel = (f.fromCode&&f.fromCode!=='??'&&f.toCode&&f.toCode!=='??')
+      ? ` — ${f.fromCode} → ${f.toCode}`
+      : '';
+    if(legLabel||routeLabel){
+      html+=`<div style="font-size:11px;font-weight:700;color:#7f1d1d;margin-bottom:6px;opacity:.7;">${legLabel}${routeLabel}</div>`;
+    }
+    html+=`<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:${issues.length>1?'14px':'0'};">`;
+    missing.forEach(m=>{
+      html+=`<div style="display:flex;align-items:flex-start;gap:10px;background:#fff;border:1px solid #fecaca;border-radius:9px;padding:9px 12px;">
+        <span style="font-size:18px;flex-shrink:0;">${m.icon}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:700;color:#991b1b;">${isAr?m.ar:m.en}</div>
+          <div style="font-size:11px;color:#b91c1c;margin-top:2px;font-family:'IBM Plex Mono',monospace;opacity:.8;">${isAr?'مثال: ':'e.g. '}${m.ex}</div>
+        </div>
+        <span style="font-size:18px;flex-shrink:0;color:#fca5a5;">✗</span>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+
+  // Progress indicator
+  const totalFields = flights.length * 5;
+  const missingCount = issues.reduce((a,i)=>a+i.missing.length,0);
+  const doneCount = totalFields - missingCount;
+  const pct = Math.round((doneCount/totalFields)*100);
+  html+=`<div style="margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#991b1b;margin-bottom:4px;">
+      <span>${isAr?'اكتمال البيانات':'Data completeness'}</span>
+      <span>${pct}%</span>
+    </div>
+    <div style="background:#fecaca;border-radius:99px;height:5px;">
+      <div style="background:#dc2626;width:${pct}%;height:5px;border-radius:99px;transition:.4s;"></div>
+    </div>
+  </div>`;
+
+  html+=`</div>`;
+  errDiv.innerHTML=html;
   errDiv.style.display='block';
-  // Apply lang visibility
-  errDiv.querySelectorAll('[data-ar]').forEach(el=>el.style.display=isAr?'':'none');
-  errDiv.querySelectorAll('[data-en]').forEach(el=>el.style.display=isAr?'none':'');
   return false;
 }
 
@@ -3633,6 +3755,57 @@ window.setLang = function(lang){
   }
 };
 
+
+// ══ SITE META FROM JSON ══
+function _updateSiteMeta(db){
+  if(!db) return;
+  const desc   = db.description   || '';
+  const ver    = db.version        || '';
+  const updated= db.lastUpdated    || '';
+
+  // Extract site name: everything before " — " or use full description
+  const namePart = desc.split('—')[0].trim() || 'Al-Mosafer';
+  const tagPart  = desc.includes('—') ? desc.split('—').slice(1).join('—').trim() : '';
+
+  // Update <title>
+  if(ver) document.title = `${namePart} v${ver} — LCC Amendment`;
+
+  // Update footer
+  const footer = document.querySelector('[style*="position:fixed;bottom"]');
+  if(footer){
+    footer.innerHTML = `⚡ <strong style="color:var(--muted);">${namePart}</strong>`
+      + (tagPart ? ` · <span style="color:var(--faint);font-size:10px;">${tagPart}</span>` : '')
+      + (updated ? ` · <span style="color:var(--faint);font-size:10px;">${updated}</span>` : '');
+  }
+
+  // Update sidebar version badge
+  const vBadge = document.querySelector('.sb-version');
+  if(vBadge && ver) vBadge.textContent = 'v'+ver;
+
+  // Update welcome popup title
+  const wTitle = document.querySelector('.welcome-title');
+  if(wTitle){
+    wTitle.innerHTML = `<span data-ar>${namePart}</span><span data-en style="display:${currentLang==='ar'?'none':''};">${namePart}</span>`;
+  }
+  const wSub = document.querySelector('.welcome-sub');
+  if(wSub && tagPart){
+    wSub.innerHTML = `<span>${tagPart}</span>`;
+  }
+
+  // Update DB info pill in header (add if not there)
+  let dbPill = document.getElementById('dbInfoPill');
+  if(!dbPill){
+    dbPill = document.createElement('div');
+    dbPill.id = 'dbInfoPill';
+    dbPill.style.cssText = 'background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;display:flex;align-items:center;gap:5px;white-space:nowrap;';
+    const pbRight = document.querySelector('.pb-right');
+    if(pbRight) pbRight.insertBefore(dbPill, pbRight.firstChild);
+  }
+  const airportCount = Object.keys(airportMap).length;
+  const airlineCount = Object.keys(airDB).length;
+  dbPill.innerHTML = `🗄️ <span>${airportCount} ${currentLang==='ar'?'مطار':'airports'} · ${airlineCount} ${currentLang==='ar'?'شركة':'airlines'}</span>`;
+}
+
 // ══ INPUT LOCKING ══
 // Returns true if flights are valid (all key fields present)
 function flightIsValid(){
@@ -3659,10 +3832,19 @@ function updateInputLocks(){
     const c = document.getElementById(content);
     if(!b || !c) return;
     if(valid){
-      b.style.display = 'none';
-      c.classList.remove('input-locked');
+      // Was locked before → show unlock animation once
+      if(c.classList.contains('input-locked')){
+        b.style.display = 'none';
+        c.classList.remove('input-locked');
+        c.classList.add('input-unlocked');
+        setTimeout(()=>c.classList.remove('input-unlocked'), 900);
+      } else {
+        b.style.display = 'none';
+        c.classList.remove('input-locked');
+      }
     } else {
       b.style.display = 'flex';
+      c.classList.remove('input-unlocked');
       c.classList.add('input-locked');
     }
   });
