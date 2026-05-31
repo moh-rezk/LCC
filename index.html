@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" id="htmlTag">
 <head>
@@ -728,7 +729,16 @@ html[lang=ar] [data-en] { display: none !important; }
           </div>
 
           <!-- Search button -->
-          <button class="fs-btn" id="fsSearchBtn" onclick="fsSearch()" style="margin-top:10px;">
+          <div style="margin-top:6px;">
+<div class="fs-label" data-ar>🔑 مفتاح Anthropic API</div>
+<div class="fs-label" data-en>🔑 Anthropic API Key</div>
+<input id="fsApiKey" type="password" class="fs-input" placeholder="sk-ant-..." 
+  oninput="saveApiKey()" style="font-family:'IBM Plex Mono',monospace;font-size:11px;"
+  value="">
+<div style="font-size:10px;color:var(--faint);margin-top:3px;" data-ar>مطلوب فقط لميزة البحث الذكي — يُحفظ محلياً</div>
+<div style="font-size:10px;color:var(--faint);margin-top:3px;" data-en>Required only for AI search — saved locally</div>
+</div>
+<button class="fs-btn" id="fsSearchBtn" onclick="fsSearch()" style="margin-top:10px;">
             <span>🔍</span>
             <span data-ar>بحث بالذكاء الاصطناعي</span>
             <span data-en>AI Flight Search</span>
@@ -1285,7 +1295,7 @@ let _dataLoaded = false;
 
 async function loadFlightData() {
   try {
-    const res = await fetch('flight_data.json');
+    const res = await fetch('https://raw.githubusercontent.com/moh-rezk/GDS2/main/flight_data.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const db = await res.json();
 
@@ -2931,7 +2941,17 @@ window.openFeesPanel=openFeesPanel;window.closeFeesPanel=closeFeesPanel;window.c
 window.setTripType=setTripType;window.updateCurrencyLabel=updateCurrencyLabel;
 window.copyMsgBox=copyMsgBox;
 window.setActiveCountry=setActiveCountry;window.toggleCurDropdown=toggleCurDropdown;
+
 window.fsSearch=fsSearch;window.fsTripSelect=fsTripSelect;
+
+// ── API KEY ──
+function getUserApiKey(){
+  return (document.getElementById('fsApiKey')||{}).value||localStorage.getItem('msApiKey')||'';
+}
+function saveApiKey(){
+  const v=(document.getElementById('fsApiKey')||{}).value||'';
+  if(v) localStorage.setItem('msApiKey',v);
+}
 
 // ══ SIDEBAR NAV ══
 const sbSections={
@@ -3063,6 +3083,15 @@ Airlines to check: ${airlinesStr}
 Search each airline website (flynas.com, flyadeal.com, airarabia.com, jazeeraairways.com, flydubai.com, salamair.com, saudia.com, omanair.com, etc.) for actual flight schedules on this date.
 Return ALL available flights found as JSON.`;
 
+  // Check API key
+  const apiKey = getUserApiKey();
+  if(!apiKey){
+    fsShowError(currentLang==='ar'
+      ? '⚠️ أدخل مفتاح Anthropic API أولاً (sk-ant-...) في حقل المفتاح أعلى زر البحث'
+      : '⚠️ Please enter your Anthropic API key (sk-ant-...) in the field above the search button');
+    return;
+  }
+
   // Show loading
   document.getElementById('fsSearchBtn').disabled=true;
   document.getElementById('fsLoading').style.display='flex';
@@ -3072,7 +3101,7 @@ Return ALL available flights found as JSON.`;
   try {
     const response=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':getUserApiKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:3000,
